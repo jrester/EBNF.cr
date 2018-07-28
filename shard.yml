@@ -1,0 +1,9 @@
+name: ebnf
+version: 0.1.0
+
+authors:
+  - TheKingsJrester <jrester379@gmail.com>
+
+crystal: 0.25.1
+
+license: MIT
