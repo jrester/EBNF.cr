@@ -97,7 +97,7 @@ module EBNF
     end
 
     def self.from(string : String)
-      Parser.parse string
+      Grammar.new Parser.parse(string), Grammar::GrammarType::BNF
     end
 
     def self.from_file(path : String)
@@ -106,10 +106,6 @@ module EBNF
 
     def self.from_ebnf(grammar : Grammar)
       raise "Not Implemented"
-    end
-
-    def self.from_bison(grammar : Grammar)
-
     end
   end
 end

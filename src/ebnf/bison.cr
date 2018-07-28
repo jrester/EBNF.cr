@@ -4,10 +4,13 @@ require "./grammar"
 module EBNF
   module Bison
     class Rule < EBNF::Rule
-      property action : String|Nil
-
       def initialize(@atoms = Array(Atom).new, @action = nil)
       end
+
+      JSON.mapping(
+        atoms: Array(Atom),
+        action: String?
+      )
     end
 
     class Empty < EBNF::Rule
@@ -78,7 +81,7 @@ module EBNF
 
       private def self.parse_production(tokens)
         pos = -1
-        rules = Array(EBNF::Rule).new
+        rules = Array(::EBNF::Rule).new
 
         while tokens.size > pos
           token = tokens[pos += 1]
@@ -123,7 +126,7 @@ module EBNF
     end
 
     def self.from(string)
-      Parser.parse string
+      Grammar.new Parser.parse(string), Grammar::GrammarType::Bison
     end
 
     def self.from_file(path : String)

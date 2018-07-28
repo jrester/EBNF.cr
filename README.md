@@ -1,4 +1,4 @@
-# EBNF
+# EBNF.cr
 
 A Parser for EBNF, BNF and Bison/Yacc Grammar
 
@@ -9,26 +9,26 @@ Add this to your application's `shard.yml`:
 ```yaml
 dependencies:
   ebnf:
-    github: TheKingsJrester/ebnf
+    github: TheKingsJrester/EBNF.cr
 ```
 
 ## Usage
 
-Grammar can be built from a string (#from) directly or from a file (#from_file)
+Grammar can be built from a string directly with `#from` or from a file with `#from_file`. This will return a `EBNF::Grammar`.
 
-### EBNF Grammar
+#### EBNF Grammar
 
 ```crystal
 require "ebnf"
 
 # Read from a file
-EBNF::EBNF.from_file "grammar.y"
+ebnf = EBNF::EBNF.from_file "grammar.y" #=> EBNF::Grammar
 
 # Parse the string directly
-EBNF::EBNF.from
+ebnf = EBNF::EBNF.from #= EBNF::Grammar
 ```
 
-### BNF grammar
+#### BNF grammar
 
 ```crystal
 require "ebnf"
@@ -39,11 +39,11 @@ grammar <<-BNF_Grammar
 <bar> ::= "B" "A" | "A" "B"
 BNF_Grammar
 
-bnf = EBNF::BNF.from grammar
+bnf = EBNF::BNF.from grammar # => EBNF::Grammar
 ```
 
 
-### Bison/Yacc Grammar´
+#### Bison/Yacc Grammar
 
 ```crystal
 require "ebnf"
@@ -62,15 +62,15 @@ bar:
     | A B
 Grammar
 
-bison = EBNF::Bison.from grammar
-
+bison = EBNF::Bison.from grammar # => EBNF::Grammar
 ```
 
-TODO: Write usage instructions here
+Every Grammar can be exported to json with `#to_json`
+and be converted to BNF grammar using `#to_bnf`.
+
 
 ## Development
 
-TODO: Write development instructions here
 
 ## Contributing
 
