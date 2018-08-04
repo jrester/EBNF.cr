@@ -1,8 +1,11 @@
 require "string_scanner"
 require "./grammar"
+require "./macros"
 
 module EBNF
   module Bison
+    extend EBNF::Base
+
     class Rule < EBNF::Rule
       def initialize(@atoms = Array(Atom).new, @action = nil)
       end
@@ -11,11 +14,10 @@ module EBNF
         atoms: Array(Atom),
         action: String?
       )
-    end
 
-    class Empty < EBNF::Rule
-      def initialize
-        @atoms = Array(Atom).new
+      def to_s(io, grammar_type = Grammar::GrammarType::Bison)
+        super(io, grammar_type)
+        io << "\t\t\t{#{@action}}" if @action
       end
     end
 
@@ -30,9 +32,9 @@ module EBNF
 
         scanner = StringScanner.new string
 
-        while !scanner.eos?
+        until scanner.eos?
           # skip spaces and comments
-          next if (s = scanner.skip(/\s+/)) || (s = scanner.skip(/\/\*(|[^\*\/])\*\//))
+          next if scanner.skip(/\h+/) || (s = scanner.skip(/\/\*(|[^\*\/])\*\//))
 
           c = if s = scanner.scan(/:/)
                 :colon
@@ -44,13 +46,19 @@ module EBNF
                 :nonterminal
               elsif s = scanner.scan(/[A-Z]([A-Z0-9]|\_|\-)*/)
                 :terminal
+              elsif s = scanner.scan(/\'(.|[^\'])'/)
+                s = s[1...-1]
+                :terminal
               elsif s = scanner.scan(/\{[^\}]+\}/)
                 :code
               elsif s = scanner.scan(/\n/)
                 line += 1
                 :newline
+              elsif s = scanner.scan(/$/)
+                :EOF
               else
-                scanner.offset += 1 # Otherwise we would test the same string all the time again without reaching an end
+                puts "Unable to recognize #{scanner.rest}"
+                scanner.offset += 1 # Otherwise we would scan the same string all the time again without reaching the end
                 :unknown
               end
 
@@ -61,42 +69,65 @@ module EBNF
       end
 
       private def self.parse(tokens)
-        productions = Array(Production).new
+        grammar = Grammar.new type: Grammar::GrammarType::Bison
         pos = -1
 
-        while tokens.size > pos
-          token = tokens[pos += 1]
-          lookahead = tokens[pos += 1]
+        while pos < tokens.size
+          token = tokens[pos += 1]?
+          break unless token
+          lookahead = tokens[pos + 1]?
+          break unless lookahead
+
+          #puts "token: #{token}, lookahead: #{lookahead}"
 
           if token[:token] == :newline
             next
           elsif token[:token] == :nonterminal && lookahead[:token] == :colon
-            rules, pos_increment = parse_production(tokens[pos..-1])
-            productions << Production.new token[:value].not_nil!, rules
-            pos += pos_increment
+            # Must be + 2 so we don't parse the ':' again
+            rules, pos_increment = parse_production tokens[pos + 2..-1], grammar
+            grammar.productions[token[:value].not_nil!] = Production.new rules
+            # we must add 2 to pos_increment because we passed tokens[pos + 2..-1]
+            pos += pos_increment + 2
+          elsif token[:token] == :EOF
+            break
+          else
+            raise "Unexpected token #{token[:token]} at #{token[:line]}:#{token[:pos]}"
           end
         end
-        productions
+        grammar
       end
 
-      private def self.parse_production(tokens)
+      private def self.parse_production(tokens, grammar)
         pos = -1
+        accept = false
         rules = Array(::EBNF::Rule).new
 
-        while tokens.size > pos
-          token = tokens[pos += 1]
-          if token[:token] == :newline
-            next
-          elsif token[:token] == :bar
-            if tokens[pos + 1][:token] != :nonterminal || tokens[pos + 1][:token] != :terminal
+        until accept || pos >= tokens.size
+          token = tokens[pos += 1]?.try &.[:token]
+          lookahead = tokens[pos + 1]?.try &.[:token]
+
+        #puts "token: #{token}, lookahead: #{lookahead}, pos: #{pos}"
+
+          if token == :newline
+            if lookahead == :bar
+              # if this is the first token we have 'nonterminal:\n|' which results in an empty rule
+              pos == 0 ? rules << Empty.new : next
+            elsif pos == 0 && (lookahead == :nonterminal || lookahead == :terminal)
+              # Only on the first token the next one can be nonterminal or terminal
+              # Otherwise it is a new production
+              next
+            else
+              accept = true
+            end
+          elsif token == :bar
+            if lookahead == :newline || pos == 0
+              # Allow: "| \n\n" and <name>: | 
               rules << Empty.new
             else
-              rule, pos_increment = parse_rule tokens[pos..-1]
-              rules << rule
-              pos += pos_increment
+              next
             end
-          elsif token[:token] == :terminal || token[:token] == :nonterminal
-            rule, pos_increment = parse_rule tokens[pos..-1]
+          elsif token == :nonterminal || token == :terminal
+            rule, pos_increment = parse_rule tokens[pos..-1], grammar
             rules << rule
             pos += pos_increment
           end
@@ -104,33 +135,28 @@ module EBNF
         {rules, pos}
       end
 
-      private def self.parse_rule(tokens)
+      private def self.parse_rule(tokens, grammar)
         rule = Bison::Rule.new
-        pos = 0
+        pos = -1
 
-        tokens.each do |t|
-          pos += 1
+        tokens.each do | t |
           if t[:token] == :nonterminal
-            rule.atoms << Atom.new t[:value].not_nil!, false
+            rule.atoms << Nonterminal.new t[:value].not_nil!
           elsif t[:token] == :terminal
-            rule.atoms << Atom.new t[:value].not_nil!, true # remove ' and ' from string value
+            grammar.terminals << t[:value].not_nil!
+            rule.atoms << Terminal.new t[:value].not_nil!
           elsif t[:token] == :code
-            rule.action = t[:value].not_nil![1..-2] # remove { and } from code value
+            rule.action = t[:value].not_nil![1..-2] # remove { and } from code
             break
           else
             break
           end
+
+          # Must be after the if's so pos is not incremented if we break
+          pos += 1
         end
         {rule, pos}
       end
-    end
-
-    def self.from(string)
-      Grammar.new Parser.parse(string), Grammar::GrammarType::Bison
-    end
-
-    def self.from_file(path : String)
-      from File.read path
     end
   end
 end

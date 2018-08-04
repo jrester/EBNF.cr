@@ -2,6 +2,8 @@ require "./grammar"
 
 module EBNF
   module BNF
+    extend Base
+
     class Parser
       def self.parse(string : String)
         parse lex string
@@ -94,14 +96,6 @@ module EBNF
         end
         {rule, pos}
       end
-    end
-
-    def self.from(string : String)
-      Grammar.new Parser.parse(string), Grammar::GrammarType::BNF
-    end
-
-    def self.from_file(path : String)
-      from File.read path
     end
 
     def self.from_ebnf(grammar : Grammar)
