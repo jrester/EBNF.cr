@@ -5,6 +5,7 @@ Library for working with Context free Grammar:
 * Convert EBNF to BNF
 * Generate CNF
 * Generate First/Follow sets
+* Create DFA and LR(0) Parsing table
 
 
 > Note:
@@ -31,13 +32,18 @@ dependencies:
   - [Generate CNF](#cnf)
 * [FIRST/FOLLOW Set](#first-follow)
 
-<a name="parsing">
+<a name="parsing"/>
+
 ### Prase Grammar
 
 Grammar can be built from a string directly with `#from` or from a file with `#from_file`. This will return a `EBNF::Grammar`.
 
-<a name="parsing-ebnf">
+
+<a name="parsing-ebnf"/>
+
+
 #### EBNF Grammar
+
 
 ```crystal
 require "ebnf"
@@ -48,8 +54,11 @@ ebnf = EBNF::EBNF.from_file "grammar.y" #=> EBNF::Grammar
 # Parse the string directly
 ebnf = EBNF::EBNF.from #= EBNF::Grammar
 ```
-<a name="parsing-bnf">
+
+<a name="parsing-bnf"/>
+
 #### BNF Grammar
+
 
 ```crystal
 require "ebnf"
@@ -63,7 +72,8 @@ BNF_Grammar
 bnf = EBNF::BNF.from grammar # => EBNF::Grammar
 ```
 
-<a name="parsing-bison-yacc">
+<a name="parsing-bison-yacc"/>
+
 #### Bison/Yacc Grammar
 
 ```crystal
@@ -89,24 +99,67 @@ bison = EBNF::Bison.from grammar #=> EBNF::Grammar
 Every Grammar can be exported to json with `#to_json`
 and be converted to BNF grammar using `#to_bnf`.
 
-<a name="convert">
+
+<a name="convert"/>
+
 ### Convert Grammar
 
-<a name="first-follow">
+<a name="ebnf-to-bnf"/>
+
+#### Convert EBNF to BNF
+
+This will convert the `grammar` to BNF.
+
+```crystal
+require "ebnf"
+
+grammar = EBNF::EBNF.from_file "grammar.y"
+grammar.to_bnf # => nil
+grammar.type #=> EBNF::Grammar::GrammarType::BNF
+```
+
+#### Generate CNF
+
+```crystal
+grammar.to_cnf #=> nil
+```
+
+This will convert `grammar` to [CNF](htpps://https://en.wikipedia.org/wiki/Chomsky_normal_form). The order and number of steps can be specified by an Array of `EBNF::CNF::Step`.
+
+```crystal
+grammar.to_cnf [EBNF::CNF::START, EBNF::CNF::UNIT, EBNF::CNF::START]
+```
+
+This will run frist START, then UNIT and again START. The default order is:
+* START
+* TERM
+* BIN
+* DEL
+* UNIT
+
+> Note: Every step will be run in the way you pass it, so in the above example START will be run two times even if that wasn't your intention.
+
+
+<a name="first-follow"/>
+
 ### FIRST/FOLLOW Set
 
-`Grammar#first_follow` generates FIRST/FOLLOW sets. It returns an Array with two hashes each of them containing either the first or follow table indexed by each production.
+`Grammar#first_follow` generates FIRST/FOLLOW sets. It returns a Tuple with two hashes each of them containing either the first or follow table indexed by each production.
 
 The start production of the grammar will, if not other specified with `Grammar#start`,
 be the first production of the parsed grammar.
 
 ```crystal
-require "ebnf"
-
-grammar = EBNF::Bison.from_file "grammar.y" #=> EBNF::Grammar
 grammar.first_follow
-  #=> [Hash(String, Set(Terminal)), Hash(String, Set(Terminal))]
+  #=> (Hash(String, Set(Terminal)), Hash(String, Set(Terminal)))
+```
 
+### Create DFA
+
+You can export a [DFA](https://en.wikipedia.org/wiki/Deterministic_finite_automaton) from `grammar` with `EBNF::Grammar#to_dfa`.
+
+```crystal
+grammar.to_dfa #=> EBNF::DFA::State
 ```
 
 ## Development

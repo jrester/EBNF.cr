@@ -47,7 +47,7 @@ module EBNF
               elsif s = scanner.scan(/[A-Z]([A-Z0-9]|\_|\-)*/)
                 :terminal
               elsif s = scanner.scan(/\'(.|[^\'])'/)
-                s = s[1...-1]
+                s = s.lchop.rchop
                 :terminal
               elsif s = scanner.scan(/\{[^\}]+\}/)
                 :code
@@ -62,9 +62,11 @@ module EBNF
                 :unknown
               end
 
-          tokens << {token: c, value: s, line: line, pos: s ? (scanner.offset - s.size) : scanner.offset - 1}
+          tokens << {token: c,
+                     value: s,
+                     line: line,
+                     pos: s ? (scanner.offset - s.size) : scanner.offset - 1}
         end
-
         tokens
       end
 
@@ -78,7 +80,7 @@ module EBNF
           lookahead = tokens[pos + 1]?
           break unless lookahead
 
-          #puts "token: #{token}, lookahead: #{lookahead}"
+          # puts "token: #{token}, lookahead: #{lookahead}"
 
           if token[:token] == :newline
             next
@@ -106,7 +108,7 @@ module EBNF
           token = tokens[pos += 1]?.try &.[:token]
           lookahead = tokens[pos + 1]?.try &.[:token]
 
-        #puts "token: #{token}, lookahead: #{lookahead}, pos: #{pos}"
+          # puts "token: #{token}, lookahead: #{lookahead}, pos: #{pos}"
 
           if token == :newline
             if lookahead == :bar
@@ -121,7 +123,7 @@ module EBNF
             end
           elsif token == :bar
             if lookahead == :newline || pos == 0
-              # Allow: "| \n\n" and <name>: | 
+              # Allow: "| \n\n" and "foo: |"
               rules << Empty.new
             else
               next
@@ -139,7 +141,7 @@ module EBNF
         rule = Bison::Rule.new
         pos = -1
 
-        tokens.each do | t |
+        tokens.each do |t|
           if t[:token] == :nonterminal
             rule.atoms << Nonterminal.new t[:value].not_nil!
           elsif t[:token] == :terminal
