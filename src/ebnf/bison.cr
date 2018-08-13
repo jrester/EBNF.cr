@@ -1,6 +1,7 @@
 require "string_scanner"
 require "./grammar"
 require "./macros"
+require "./parser"
 
 module EBNF
   module Bison
@@ -15,89 +16,61 @@ module EBNF
         action: String?
       )
 
-      def to_s(io, grammar_type = Grammar::GrammarType::Bison)
+      def to_s(io, grammar_type = Grammar::Type::Bison)
         super(io, grammar_type)
         io << "\t\t\t{#{@action}}" if @action
       end
     end
 
-    class Parser
-      def self.parse(string : String)
-        parse lex string
-      end
-
+    class Parser < EBNF::Parser
       private def self.lex(string)
         tokens = Array(Token).new
+        column = 0
         line = 0
 
         scanner = StringScanner.new string
 
         until scanner.eos?
           # skip spaces and comments
-          next if scanner.skip(/\h+/) || (s = scanner.skip(/\/\*(|[^\*\/])\*\//))
+          if (s = scanner.skip(/\h+/)) || (s = scanner.skip(/\/\*(|[^\*\/])\*\//))
+            column += s
+            next
+          end
 
-          c = if s = scanner.scan(/:/)
-                :colon
-              elsif s = scanner.scan(/\|/)
-                :bar
-              elsif s = scanner.scan(/\;/)
-                :semicolon
-              elsif s = scanner.scan(/[a-z]([a-z0-9]|\_|\-)*/)
-                :nonterminal
-              elsif s = scanner.scan(/[A-Z]([A-Z0-9]|\_|\-)*/)
-                :terminal
-              elsif s = scanner.scan(/\'(.|[^\'])'/)
-                s = s.lchop.rchop
-                :terminal
-              elsif s = scanner.scan(/\{[^\}]+\}/)
-                :code
-              elsif s = scanner.scan(/\n/)
-                line += 1
-                :newline
-              elsif s = scanner.scan(/$/)
-                :EOF
-              else
-                puts "Unable to recognize #{scanner.rest}"
-                scanner.offset += 1 # Otherwise we would scan the same string all the time again without reaching the end
-                :unknown
-              end
+          token = if s = scanner.scan(/:/)
+                    :colon
+                  elsif s = scanner.scan(/\|/)
+                    :bar
+                  elsif s = scanner.scan(/\;/)
+                    :semicolon
+                  elsif s = scanner.scan(/[a-z]([a-z0-9]|\_|\-)*/)
+                    :nonterminal
+                  elsif s = scanner.scan(/[A-Z]([A-Z0-9]|\_|\-)*/)
+                    :terminal
+                  elsif s = scanner.scan(/\'(.|[^\'])'/)
+                    s = s.lchop.rchop
+                    :terminal
+                  elsif s = scanner.scan(/\{[^\}]+\}/)
+                    :code
+                  elsif s = scanner.scan(/\n/)
+                    line += 1
+                    :newline
+                  elsif s = scanner.scan(/$/)
+                    :EOF
+                  else
+                    raise UnknownTokenError.new scanner.peek 1, line, scanner.offset
+                  end
 
-          tokens << {token: c,
+          tokens << {token: token,
                      value: s,
-                     line: line,
-                     pos: s ? (scanner.offset - s.size) : scanner.offset - 1}
+                     pos:   {line, column}}
+
+          token != :newline ? (column += s.size) : (column = 0)
         end
         tokens
       end
 
-      private def self.parse(tokens)
-        grammar = Grammar.new type: Grammar::GrammarType::Bison
-        pos = -1
-
-        while pos < tokens.size
-          token = tokens[pos += 1]?
-          break unless token
-          lookahead = tokens[pos + 1]?
-          break unless lookahead
-
-          # puts "token: #{token}, lookahead: #{lookahead}"
-
-          if token[:token] == :newline
-            next
-          elsif token[:token] == :nonterminal && lookahead[:token] == :colon
-            # Must be + 2 so we don't parse the ':' again
-            rules, pos_increment = parse_production tokens[pos + 2..-1], grammar
-            grammar.productions[token[:value].not_nil!] = Production.new rules
-            # we must add 2 to pos_increment because we passed tokens[pos + 2..-1]
-            pos += pos_increment + 2
-          elsif token[:token] == :EOF
-            break
-          else
-            raise "Unexpected token #{token[:token]} at #{token[:line]}:#{token[:pos]}"
-          end
-        end
-        grammar
-      end
+      parse_function_for Grammar::Type::Bison
 
       private def self.parse_production(tokens, grammar)
         pos = -1
@@ -143,12 +116,12 @@ module EBNF
 
         tokens.each do |t|
           if t[:token] == :nonterminal
-            rule.atoms << Nonterminal.new t[:value].not_nil!
+            rule.atoms << Nonterminal.new t[:value]
           elsif t[:token] == :terminal
             grammar.terminals << t[:value].not_nil!
-            rule.atoms << Terminal.new t[:value].not_nil!
+            rule.atoms << Terminal.new t[:value]
           elsif t[:token] == :code
-            rule.action = t[:value].not_nil![1..-2] # remove { and } from code
+            rule.action = t[:value][1..-2] # remove { and } from code
             break
           else
             break

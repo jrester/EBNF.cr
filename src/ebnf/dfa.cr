@@ -5,7 +5,6 @@ module EBNF
     alias Item = NamedTuple(production: String, dot_index: Int32)
     alias ItemSet = Hash(String, Array(Tuple(Rule, Int32)))
 
-
     class State
       def initialize(@kernel : Item, @item_set = ItemSet.new)
         @item_set << @kernel
@@ -14,9 +13,9 @@ module EBNF
 
     def self.closure(item : Item, grammar : Grammar)
       item_set = ItemSet.new
-      grammar[item[:production]].each do | rule |
+      grammar[item[:production]].each do |rule|
         item_set[item[:production]] = Array(Tuple(Rule, Int32)).new unless item_set[item[:production]]?
-        item_set[item[:production]] << { rule, item[:dot_index]}
+        item_set[item[:production]] << {rule, item[:dot_index]}
         if (nonterminal = rule[item[:dot_index]]?).is_a? Nonterminal
           item_set.merge! closure({production: nonterminal.value, dot_index: 0}, grammar) unless item_set[nonterminal.value]?
         end
@@ -29,19 +28,19 @@ module EBNF
       s0 = {production: start, dot_index: 0}
       item_set_0 = closure s0, grammar
       following = Set(String).new
-      item_set_0.each do | key, value |
-        value.each do | item |
+      item_set_0.each do |key, value|
+        value.each do |item|
           following << item[0][item[1]]
         end
       end
-      following.each do | symbol |
+      following.each do |symbol|
         symbol
       end
     end
 
     def self.pp(item_set : ItemSet)
-      item_set.each do | key, value |
-        value.each do | rule |
+      item_set.each do |key, value|
+        value.each do |rule|
           if key == item_set.first_key
             print "#{key} -> "
           else
@@ -51,7 +50,6 @@ module EBNF
         end
       end
     end
-
   end
 
   class Grammar
@@ -61,7 +59,7 @@ module EBNF
     def to_dfa(first_follow_table : FirstFollowTable? = nil, no_new_start : Bool = false)
       # Intruduce a new Start rule
       unless no_new_start && @productions[start].unit?
-        productions["S#{start.hash}"] = Production.new [Rule.new [Nonterminal.new(start), Terminal.new "$"] of Atom ]
+        productions["S#{start.hash}"] = Production.new [Rule.new [Nonterminal.new(start), Terminal.new "$"] of Atom]
         @start = "S#{start.hash}"
       end
 

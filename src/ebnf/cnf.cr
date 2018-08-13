@@ -73,6 +73,7 @@ module EBNF
   end
 
   class Grammar
+    # Transforms this grammar to CNF Grammar
     def to_cnf(order = [CNF::Step::START, CNF::Step::TERM, CNF::Step::BIN, CNF::Step::DEL, CNF::Step::UNIT])
       order.each do |step|
         case step

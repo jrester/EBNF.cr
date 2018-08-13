@@ -1,11 +1,13 @@
 # EBNF.cr
 
+[![Built with Crystal](https://img.shields.io/badge/built%20with-crystal-000000.svg?style=flat-square)](https://crystal-lang.org/)
+
 Library for working with Context free Grammar:
 * Parse EBNF, BNF and Bison/Yacc Grammar
-* Convert EBNF to BNF
+* Convert EBNF to BNF (Not Finished yet)
 * Generate CNF
 * Generate First/Follow sets
-* Create DFA and LR(0) Parsing table
+* Create DFA and LR(0) Parsing table (Not Finished yet)
 
 
 > Note:
@@ -36,7 +38,7 @@ dependencies:
 
 ### Prase Grammar
 
-Grammar can be built from a string directly with `#from` or from a file with `#from_file`. This will return a `EBNF::Grammar`.
+Grammar can be built from a string directly with `#from` or from a file with `#from_file` which will return an `EBNF::Grammar`.
 
 
 <a name="parsing-ebnf"/>
@@ -51,8 +53,40 @@ require "ebnf"
 # Read from a file
 ebnf = EBNF::EBNF.from_file "grammar.y" #=> EBNF::Grammar
 
+grammar = <<-Grammar
+letter = "A" | "B" | "C" | "D" | "E" | "F" | "G"
+       | "H" | "I" | "J" | "K" | "L" | "M" | "N"
+       | "O" | "P" | "Q" | "R" | "S" | "T" | "U"
+       | "V" | "W" | "X" | "Y" | "Z" | "a" | "b"
+       | "c" | "d" | "e" | "f" | "g" | "h" | "i"
+       | "j" | "k" | "l" | "m" | "n" | "o" | "p"
+       | "q" | "r" | "s" | "t" | "u" | "v" | "w"
+       | "x" | "y" | "z" ;
+digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+symbol = "[" | "]" | "{" | "}" | "(" | ")" | "<" | ">"
+       | "'" | '"' | "=" | "|" | "." | "," | ";" ;
+character = letter | digit | symbol | "_" ;
+
+identifier = letter , { letter | digit | "_" } ;
+terminal = "'" , character , { character } , "'"
+         | '"' , character , { character } , '"' ;
+
+lhs = identifier ;
+rhs = identifier
+     | terminal
+     | "[" , rhs , "]"
+     | "{" , rhs , "}"
+     | "(" , rhs , ")"
+     | rhs , "|" , rhs
+     | rhs , "," , rhs ;
+
+rule = lhs , "=" , rhs , ";" ;
+grammar = { rule } ;
+Grammar
+
 # Parse the string directly
-ebnf = EBNF::EBNF.from #= EBNF::Grammar
+ebnf = EBNF::EBNF.from grammar #=> EBNF::Grammar
+puts ebnf #=> letter = "A" | "B" | ...
 ```
 
 <a name="parsing-bnf"/>
@@ -164,9 +198,11 @@ grammar.to_dfa #=> EBNF::DFA::State
 
 ## Development
 
-* Error handling
+* Imporve docs
 * EBNF to BNF
+* DFA and LR(0) generation
 * Add tests
+* Benchmarks
 
 ## Contributing
 

@@ -20,17 +20,17 @@ module EBNF
       value: String
     )
 
-    def to_s(io, grammar_type = Grammar::GrammarType::EBNF)
+    def to_s(io, grammar_type = Grammar::Type::EBNF)
       case grammar_type
-      when Grammar::GrammarType::EBNF
+      when Grammar::Type::EBNF
         io << "\""
         io << @value
         io << "\""
-      when Grammar::GrammarType::BNF
+      when Grammar::Type::BNF
         io << "\""
         io << @value
         io << "\""
-      when Grammar::GrammarType::Bison
+      when Grammar::Type::Bison
         io << @value
       end
     end
@@ -57,15 +57,15 @@ module EBNF
       value: String,
     )
 
-    def to_s(io, grammar_type = Grammar::GrammarType::EBNF)
+    def to_s(io, grammar_type = Grammar::Type::EBNF)
       case grammar_type
-      when Grammar::GrammarType::EBNF
+      when Grammar::Type::EBNF
         io << @value
-      when Grammar::GrammarType::BNF
+      when Grammar::Type::BNF
         io << "<"
         io << @value
         io << ">"
-      when Grammar::GrammarType::Bison
+      when Grammar::Type::Bison
         io << @value
       end
     end
@@ -80,10 +80,14 @@ module EBNF
       atoms: Array(Atom)
     )
 
-    def to_s(io, grammar_type = Grammar::GrammarType::EBNF)
-      @atoms.each do |a|
+    def to_s(io, grammar_type = Grammar::Type::EBNF)
+      @atoms.each_with_index do |a, i|
         a.to_s io, grammar_type
-        io << " "
+        if grammar_type == Grammar::Type::EBNF
+          io << ", " unless i + 1 == @atoms.size
+        else
+          io << " "
+        end
       end
     end
 
@@ -104,7 +108,7 @@ module EBNF
       @atoms = Array(Atom).new
     end
 
-    def to_s(io, grammar_type = Grammar::GrammarType::Bison)
+    def to_s(io, grammar_type = Grammar::Type::Bison)
     end
   end
 
@@ -121,8 +125,8 @@ module EBNF
       rules: Array(Rule)
     )
 
-    def to_s(io, grammar_type = Grammar::GrammarType::EBNF)
-      @rules.each_with_index do | r, i |
+    def to_s(io, grammar_type = Grammar::Type::EBNF)
+      @rules.each_with_index do |r, i|
         r.to_s io, grammar_type
         io << "\n  | " if i + 1 < @rules.size
       end
@@ -139,7 +143,7 @@ module EBNF
     end
 
     def each
-      @rules.each do | rule |
+      @rules.each do |rule|
         yield rule
       end
     end
@@ -151,15 +155,21 @@ module EBNF
     end
   end
 
+  # Representation of a CFG
   class Grammar
-    enum GrammarType
+    enum Type
       EBNF,
       BNF,
       Bison
     end
 
+    # Creates a CFG with *productions* with specified `Grammar::Type` *type*
+    # *start* will be first production found in *productions*
+    # *terminals* will be added when `Grammar` is created
+    #
+    # To create `Grammar` use #from or #from_file on the module of the Grammar type you want to parse
     def initialize(@productions = Hash(String, Production).new,
-                   @type = GrammarType::EBNF,
+                   @type = Type::EBNF,
                    @start = nil,
                    @terminals = Set(String).new)
     end
@@ -167,44 +177,55 @@ module EBNF
     def to_s(io)
       @productions.each do |key, p|
         io << key
-        @type == GrammarType::BNF ? io << " ::= " : io << ":\n  "
+        definition = case @type
+                     when Type::EBNF  then " = "
+                     when Type::BNF   then " ::= "
+                     when Type::Bison then ":\n  "
+                     end
+        io << definition
         p.to_s io, @type
         io << "\n\n"
       end
     end
 
     JSON.mapping(
-      type: GrammarType, # FIXME: type is represented by an integer in json instead of a string
+      type: Type, # FIXME: type is represented by an integer in json instead of a string
       productions: Hash(String, Production),
       start: String | Nil,
       terminals: Set(String),
     )
 
+    # Converts self to BNF grammar. Returns nil if already BNF
     def to_bnf
       case @type
-      when BNF   then raise "Grammar is already BNF"
-      when EBNF  then BNF.from_ebnf self
-      when Bison then BNF.from_bison self
+      when Type::BNF   then nil
+      when Type::EBNF  then BNF.from_ebnf self
+      when Type::Bison then BNF.from_bison self
       end
     end
 
+    # Gets first production in grammar
     def start
       @start = @productions.first_key unless @start
       @start.not_nil!
     end
 
+    # Gets all nonterminals in this grammar
     def nonterminals
       @productions.keys
     end
 
+    # Access a production with *name*. Raises `KeyError` if not in grammar
     def [](name : String)
       @productions[name]
     end
 
+    # Access a production with *name*. Returns `nil` if not in grammar
     def []?(name : String)
       @prodcuctions[name]?
     end
 
+    # Sets a production with *name* to *production*
     def []=(name : String, production : Production)
       @productions[name] = production
     end
