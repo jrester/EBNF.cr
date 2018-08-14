@@ -4,10 +4,10 @@
 
 Library for working with Context free Grammar:
 * Parse EBNF, BNF and Bison/Yacc Grammar
-* Convert EBNF to BNF (Not Finished yet)
+* Convert EBNF to BNF
 * Generate CNF
 * Generate First/Follow sets
-* Create DFA and LR(0) Parsing table (Not Finished yet)
+* Create DFA and LR(0) Parsing table (Under Development)
 
 
 > Note:
@@ -144,14 +144,17 @@ and be converted to BNF grammar using `#to_bnf`.
 
 #### Convert EBNF to BNF
 
-This will convert the `grammar` to BNF.
+Use `Grammar#to_bnf` to convert the grammar to BNF. This will modifie the grammar.
+If you want a new grammar pass `true` to `Grammar#to_bnf`
+
+> Note: This may intruduce new production each of them with a unique name like 'Special_350257660880508218'
+> To make sure each name is unique the hash value of the rules in a special segment is used.
 
 ```crystal
 require "ebnf"
 
 grammar = EBNF::EBNF.from_file "grammar.y"
-grammar.to_bnf # => nil
-grammar.type #=> EBNF::Grammar::GrammarType::BNF
+grammar.to_bnf.type # =>  #=> EBNF::Grammar::GrammarType::BNF
 ```
 
 #### Generate CNF

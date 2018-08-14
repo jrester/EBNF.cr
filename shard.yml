@@ -1,10 +1,10 @@
 name: EBNF.cr
-version: 0.1.0
-description: "Parse and convert (E)BNF/Bison/Yacc grammar, generate FIRST/FOLLOW sets, create DFA"
+version: 0.1.4
+description: "Parse and work with Context free Grammar"
 
 authors:
   - jrester <jrester379@gmail.com>
 
-crystal: 0.25.1
+crystal: 0.26.0
 
 license: MIT

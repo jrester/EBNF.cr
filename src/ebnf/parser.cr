@@ -26,7 +26,7 @@ module EBNF
 
     # Parses *input* and raises UnexpectedTokenError/UnkownTokenError
     def self.parse(input : String)
-      parse lex(input, true), true
+      parse lex(input, true).not_nil!, true
     end
 
     # The parse function is the same for each CFG type
@@ -38,8 +38,7 @@ module EBNF
     macro parse_function_for(type)
       # Parses *tokens* and returns `Grammar`
       # If *exception?* is true, raises UnexpectedTokenError else returns nil
-      private def self.parse(tokens : Array(Token)|Nil, exception? : Bool)
-        return nil unless tokens
+      private def self.parse(tokens : Array(Token), exception? : Bool)
         grammar = Grammar.new type: {{type}}
         pos = -1
 

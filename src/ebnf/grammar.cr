@@ -69,6 +69,8 @@ module EBNF
         io << @value
       end
     end
+
+    def_hash @value
   end
 
   # A part of a production that consits of one or more Atoms
@@ -98,6 +100,8 @@ module EBNF
     def []?(index : Int32)
       @atoms[index]?
     end
+
+    def_hash @atoms
   end
 
   # An Empty `Rule` in a grammar
@@ -142,6 +146,14 @@ module EBNF
       @rules[index]?
     end
 
+    def []=(index : Int32, rule : Rule)
+      @rules[index] = rule
+    end
+
+    def <<(rule : Rule)
+      @rules << rule
+    end
+
     def each
       @rules.each do |rule|
         yield rule
@@ -153,6 +165,8 @@ module EBNF
     def unit?
       @rules.size == 1 && @rules[0].is_a? Nonterminal
     end
+
+    def_hash @rules
   end
 
   # Representation of a CFG
@@ -176,11 +190,10 @@ module EBNF
 
     def to_s(io)
       @productions.each do |key, p|
-        io << key
         definition = case @type
-                     when Type::EBNF  then " = "
-                     when Type::BNF   then " ::= "
-                     when Type::Bison then ":\n  "
+                     when Type::EBNF  then "#{key} = "
+                     when Type::BNF   then "<#{key}> ::= "
+                     when Type::Bison then "#{key}:\n  "
                      end
         io << definition
         p.to_s io, @type
@@ -195,15 +208,6 @@ module EBNF
       terminals: Set(String),
     )
 
-    # Converts self to BNF grammar. Returns nil if already BNF
-    def to_bnf
-      case @type
-      when Type::BNF   then nil
-      when Type::EBNF  then BNF.from_ebnf self
-      when Type::Bison then BNF.from_bison self
-      end
-    end
-
     # Gets first production in grammar
     def start
       @start = @productions.first_key unless @start
@@ -215,6 +219,22 @@ module EBNF
       @productions.keys
     end
 
+    # Changes name for each key value pair
+    # See `#change_name`
+    def change_name(prev_new : Hash(String, String))
+      prev_new.each do | prev, new |
+        change_name prev, new
+      end
+    end
+
+    # Changes name of production *prev* with name *new*
+    def change_name(prev : String, new : String)
+      if @productions.has_key? prev
+        @productions[new] = @productions[prev]
+        @productiones.delete prev
+      end
+    end
+
     # Access a production with *name*. Raises `KeyError` if not in grammar
     def [](name : String)
       @productions[name]
@@ -222,7 +242,7 @@ module EBNF
 
     # Access a production with *name*. Returns `nil` if not in grammar
     def []?(name : String)
-      @prodcuctions[name]?
+      @productions[name]?
     end
 
     # Sets a production with *name* to *production*

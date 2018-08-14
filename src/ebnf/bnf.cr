@@ -23,7 +23,7 @@ module EBNF
                     :definition
                   elsif s = scanner.scan(/\|/)
                     :bar
-                  elsif s = scanner.scan(/\<(\w|\-)+\>/)
+                  elsif s = scanner.scan(/\<(\w|\-|\_)+\>/)
                     :nonterminal
                   elsif s = scanner.scan(/\"([^\"])*\"/)
                     :string
@@ -108,10 +108,6 @@ module EBNF
         end
         {rule, pos}
       end
-    end
-
-    def self.from_ebnf(grammar : Grammar)
-      raise "Not Implemented"
     end
   end
 end

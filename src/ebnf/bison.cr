@@ -20,6 +20,8 @@ module EBNF
         super(io, grammar_type)
         io << "\t\t\t{#{@action}}" if @action
       end
+
+      def_hash @atoms, @action
     end
 
     class Parser < EBNF::Parser

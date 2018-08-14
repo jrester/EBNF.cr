@@ -66,6 +66,8 @@ module EBNF
         end
         io << enclosing_symbols[1]
       end
+
+      def_hash @type, @rules
     end
 
     class Parser < ::EBNF::Parser
