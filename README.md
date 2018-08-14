@@ -20,7 +20,7 @@ Add this to your application's `shard.yml`:
 ```yaml
 dependencies:
   ebnf:
-    github: TheKingsJrester/EBNF.cr
+    github: jrester/EBNF.cr
 ```
 
 ## Usage
@@ -39,6 +39,8 @@ dependencies:
 ### Prase Grammar
 
 Grammar can be built from a string directly with `#from` or from a file with `#from_file` which will return an `EBNF::Grammar`.
+`#from` and `#from_file` raise UnknownTokenError when a token is not known and UnexpectedTokenError if the token was not expected.
+`#from?` and `from_file?` will return nil if an error is encountered.
 
 
 <a name="parsing-ebnf"/>
@@ -206,7 +208,7 @@ grammar.to_dfa #=> EBNF::DFA::State
 
 ## Contributing
 
-1. Fork it (<https://github.com/TheKingsJrester/ebnf/fork>)
+1. Fork it (<https://github.com/jrester/ebnf/fork>)
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
@@ -214,4 +216,4 @@ grammar.to_dfa #=> EBNF::DFA::State
 
 ## Contributors
 
-- [TheKingsJrester](https://github.com/TheKingsJrester) TheKingsJrester - creator, maintainer
+- [jrester](https://github.com/jrester) jrester - creator, maintainer

@@ -3,7 +3,7 @@ version: 0.1.0
 description: "Parse and convert (E)BNF/Bison/Yacc grammar, generate FIRST/FOLLOW sets, create DFA"
 
 authors:
-  - TheKingsJrester <jrester379@gmail.com>
+  - jrester <jrester379@gmail.com>
 
 crystal: 0.25.1
 

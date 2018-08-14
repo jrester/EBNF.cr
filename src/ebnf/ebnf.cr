@@ -78,7 +78,7 @@ module EBNF
 
       RULE_CHARACTERS = {:special, :string, :nonterminal} + SPECIAL_CHARACTERS
 
-      private def self.lex(string : String)
+      private def self.lex(string : String, exception? : Bool, stop_on_unknown? : Bool=false)
         tokens = Array(Token).new
         column = 0
         line = 0
@@ -127,7 +127,15 @@ module EBNF
                   elsif s = scanner.scan(/$/)
                     :EOF
                   else
-                    raise UnknownTokenError.new (scanner.peek 1), line, column
+                    if exception?
+                      raise UnknownTokenError.new (scanner.peek 1), line, column
+                    elsif stop_on_unknown?
+                      return nil
+                    else
+                      s = scanner.peek 1
+                      scanner.offset += 1
+                      :unknown
+                    end
                   end
 
           s = s.lchop.rchop if token == :string

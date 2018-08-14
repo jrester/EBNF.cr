@@ -23,7 +23,7 @@ module EBNF
     end
 
     class Parser < EBNF::Parser
-      private def self.lex(string)
+      private def self.lex(string, exception? : Bool, stop_on_unknown? : Bool=false)
         tokens = Array(Token).new
         column = 0
         line = 0
@@ -58,7 +58,15 @@ module EBNF
                   elsif s = scanner.scan(/$/)
                     :EOF
                   else
-                    raise UnknownTokenError.new scanner.peek 1, line, scanner.offset
+                    if exception?
+                      raise UnknownTokenError.new scanner.peek 1, line, scanner.offset
+                    elsif stop_on_unkown?
+                      return nil
+                    else
+                      s = scanner.peek 1
+                      scanner.offset += 1
+                      :unknown
+                    end
                   end
 
           tokens << {token: token,
