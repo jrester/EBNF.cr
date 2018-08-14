@@ -1,4 +1,4 @@
-name: EBNF.cr
+name: ebnf
 version: 0.1.4
 description: "Parse and work with Context free Grammar"
 

@@ -1,6 +1,7 @@
 # EBNF.cr
 
 [![Built with Crystal](https://img.shields.io/badge/built%20with-crystal-000000.svg?style=flat-square)](https://crystal-lang.org/)
+[![MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://en.wikipedia.org/wiki/MIT_License)
 
 Library for working with Context free Grammar:
 * Parse EBNF, BNF and Bison/Yacc Grammar
@@ -204,7 +205,7 @@ grammar.to_dfa #=> EBNF::DFA::State
 ## Development
 
 * Imporve docs
-* EBNF to BNF
+* Add YAML and JSON support
 * DFA and LR(0) generation
 * Add tests
 * Benchmarks
