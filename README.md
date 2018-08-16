@@ -1,6 +1,7 @@
 # EBNF.cr
 
 [![Built with Crystal](https://img.shields.io/badge/built%20with-crystal-000000.svg?style=flat-square)](https://crystal-lang.org/)
+[![Built Status](https://img.shields.io/travis/jrester/EBNF.cr/master.svg?style=flat-square)](https://travis-ci.org/jrester/EBNF.cr)
 [![MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://en.wikipedia.org/wiki/MIT_License)
 
 Library for working with Context free Grammar:
@@ -133,6 +134,9 @@ Grammar
 bison = EBNF::Bison.from grammar #=> EBNF::Grammar
 ```
 
+> Note: The parser is not built for parsing c/c++ code!
+> Each code segment should contain crystal code otherwise the parser will fail
+
 Every Grammar can be exported to json with `#to_json`
 and be converted to BNF grammar using `#to_bnf`.
 
@@ -202,13 +206,27 @@ You can export a [DFA](https://en.wikipedia.org/wiki/Deterministic_finite_automa
 grammar.to_dfa #=> EBNF::DFA::State
 ```
 
-## Development
+## Roadmap
 
-* Imporve docs
-* Add YAML and JSON support
-* DFA and LR(0) generation
-* Add tests
-* Benchmarks
+- [ ] Parser
+  * [x] EBNF
+  * [x] BNF
+  * [x] Bison/YACC
+    - [ ] Bison with c/c++ Code
+  * [ ] JSON
+  * [ ] YAML
+- [ ] Conversions
+  * [x] EBNF to BNF
+  * [x] Bison to BNF
+  * [x] CNF
+  * [ ] JSON
+  * [ ] YAML
+- [x] FIRST/FOLLOW Set
+- [ ] DFA
+  - [ ] Generate DFA
+  - [ ] Use DFA to test wether a string belongs to a given grammar
+  - [ ] LR(0) Parsing Tables
+- [ ] 100% Test coverage :)
 
 ## Contributing
 

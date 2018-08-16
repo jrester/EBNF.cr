@@ -6,8 +6,8 @@ module EBNF
     def self.from_bison(grammar : Grammar)
       grammar.type = Grammar::Type::BNF
 
-      grammar.productions.each_value do | production |
-        production.rules.each_with_index do | rule, i |
+      grammar.productions.each_value do |production|
+        production.rules.each_with_index do |rule, i|
           if (bison_rule = rule).is_a? Bison::Rule
             production[i] = Rule.new bison_rule.atoms
           end
@@ -18,24 +18,23 @@ module EBNF
     def self.from_ebnf(grammar : Grammar)
       grammar.type = Grammar::Type::BNF
 
-      grammar.productions.each_value do | production |
-        production.rules.each_with_index do | rule, i |
-          rule.atoms.each_with_index do | atom, j |
-
+      grammar.productions.each_value do |production|
+        production.rules.each_with_index do |rule, i|
+          rule.atoms.each_with_index do |atom, j|
             if (special = atom).is_a? EBNF::Special
               case special.type
               when EBNF::Special::Type::Optional
                 # TODO: When [] is surronded by two other atoms we can intruduce two new rules
                 # One with the items of Special and one without them
-                #if (prev = rule.atoms[j - 1]?) && (_next = rule.atoms[j + 1]?)
-                  #production.rules.delete_at i
-                  #production.rules << Rule.new rule.atoms.insert(special.rules).flatten
-                  #production.rules << Rule.new (rule.atoms[j] = nil).compact!
-                #else
+                # if (prev = rule.atoms[j - 1]?) && (_next = rule.atoms[j + 1]?)
+                # production.rules.delete_at i
+                # production.rules << Rule.new rule.atoms.insert(special.rules).flatten
+                # production.rules << Rule.new (rule.atoms[j] = nil).compact!
+                # else
                 nonterminal = "Special_#{special.hash}"
                 grammar[nonterminal] = Production.new ([Empty.new] of Rule).concat(special.rules)
                 rule.atoms[j] = Nonterminal.new nonterminal
-                #end
+                # end
               when EBNF::Special::Type::Repetion
                 nonterminal_name = "Special_#{special.hash}"
                 nonterminal = Nonterminal.new nonterminal_name
@@ -45,7 +44,7 @@ module EBNF
                   new_production = Production.new [Empty.new] of Rule
 
                   # Prepend the new nonterminal to each rule
-                  special.rules.each do | special_rule |
+                  special.rules.each do |special_rule|
                     special_rule.atoms.unshift nonterminal
                     new_production << special_rule
                   end
@@ -62,9 +61,7 @@ module EBNF
                 end
 
                 rule.atoms[j] = nonterminal
-
               when EBNF::Special::Type::Exception
-
               end
             end
           end
@@ -76,7 +73,7 @@ module EBNF
 
   class Grammar
     # Converts self to BNF grammar. Returns nil if already BNF
-    def to_bnf(new? : Bool=false)
+    def to_bnf(new? : Bool = false)
       case @type
       when Type::BNF   then nil
       when Type::EBNF  then BNF.from_ebnf (new? ? self.dup : self)

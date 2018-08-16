@@ -25,7 +25,7 @@ module EBNF
     end
 
     class Parser < EBNF::Parser
-      private def self.lex(string, exception? : Bool, stop_on_unknown? : Bool=false)
+      private def self.lex(string, exception? : Bool, stop_on_unknown? : Bool = true)
         tokens = Array(Token).new
         column = 0
         line = 0
@@ -34,13 +34,13 @@ module EBNF
 
         until scanner.eos?
           # skip spaces and comments
-          if (s = scanner.skip(/\h+/)) || (s = scanner.skip(/\/\*(|[^\*\/])\*\//))
+          if (s = scanner.skip(/\h+/)) || (s = scanner.skip(/\/\*(.)*\*\//))
             column += s
             next
           end
 
           token = if s = scanner.scan(/:/)
-                    :colon
+                    :definition
                   elsif s = scanner.scan(/\|/)
                     :bar
                   elsif s = scanner.scan(/\;/)
@@ -49,10 +49,11 @@ module EBNF
                     :nonterminal
                   elsif s = scanner.scan(/[A-Z]([A-Z0-9]|\_|\-)*/)
                     :terminal
-                  elsif s = scanner.scan(/\'(.|[^\'])'/)
+                  elsif s = scanner.scan(/\'([^\'])*'/)
                     s = s.lchop.rchop
                     :terminal
-                  elsif s = scanner.scan(/\{[^\}]+\}/)
+                  elsif s = scanner.scan(/\{[^\}]*\}/)
+                    line += s.count "\n"
                     :code
                   elsif s = scanner.scan(/\n/)
                     line += 1
@@ -61,8 +62,8 @@ module EBNF
                     :EOF
                   else
                     if exception?
-                      raise UnknownTokenError.new scanner.peek 1, line, scanner.offset
-                    elsif stop_on_unkown?
+                      raise UnknownTokenError.new scanner.peek(1), line, scanner.offset
+                    elsif stop_on_unknown?
                       return nil
                     else
                       s = scanner.peek 1
@@ -82,16 +83,18 @@ module EBNF
 
       parse_function_for Grammar::Type::Bison
 
-      private def self.parse_production(tokens, grammar)
+      private def self.parse_production(tokens, grammar, exception? : Bool)
         pos = -1
         accept = false
         rules = Array(::EBNF::Rule).new
 
         until accept || pos >= tokens.size
           token = tokens[pos += 1]?.try &.[:token]
+          break unless token
           lookahead = tokens[pos + 1]?.try &.[:token]
+          break unless lookahead
 
-          # puts "token: #{token}, lookahead: #{lookahead}, pos: #{pos}"
+          # puts "token: #{token}, lookahead: #{lookahead}, pos: #{tokens[pos][:pos]}"
 
           if token == :newline
             if lookahead == :bar
@@ -115,6 +118,12 @@ module EBNF
             rule, pos_increment = parse_rule tokens[pos..-1], grammar
             rules << rule
             pos += pos_increment
+          else
+            if exception?
+              raise UnexpectedTokenError.new token, tokens[pos][:value], *tokens[pos][:pos]
+            else
+              return {nil, nil}
+            end
           end
         end
         {rules, pos}
@@ -132,6 +141,7 @@ module EBNF
             rule.atoms << Terminal.new t[:value]
           elsif t[:token] == :code
             rule.action = t[:value][1..-2] # remove { and } from code
+            pos += 1
             break
           else
             break

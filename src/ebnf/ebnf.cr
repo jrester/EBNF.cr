@@ -60,10 +60,8 @@ module EBNF
                             end
         io << enclosing_symbols[0]
         io << " "
-        @rules.each_with_index do |rule, i|
-          rule.to_s io, grammar_type
-          io << " | " unless i + 1 == @rules.size
-        end
+        @rules.join(" | ", io) { |r, io| r.to_s io, grammar_type }
+        io << " "
         io << enclosing_symbols[1]
       end
 
@@ -78,9 +76,9 @@ module EBNF
 
       SPECIAL_CHARACTERS = SPECIAL_LEFT_CHARACTERS + SPECIAL_RIGHT_CHARACTERS
 
-      RULE_CHARACTERS = {:special, :string, :nonterminal} + SPECIAL_CHARACTERS
+      RULE_CHARACTERS = {:special, :terminal, :nonterminal} + SPECIAL_CHARACTERS
 
-      private def self.lex(string : String, exception? : Bool, stop_on_unknown? : Bool=false)
+      private def self.lex(string : String, exception? : Bool, stop_on_unknown? : Bool = false)
         tokens = Array(Token).new
         column = 0
         line = 0
@@ -118,9 +116,9 @@ module EBNF
                   elsif s = scanner.scan(/\-/)
                     :exception
                   elsif s = scanner.scan(/\"([^\"])*"/)
-                    :string
+                    :terminal
                   elsif s = scanner.scan(/\'([^\'])*'/)
-                    :string
+                    :terminal
                   elsif s = scanner.scan(/(\w|\-|\_)+/)
                     :nonterminal
                   elsif s = scanner.scan(/\n/)
@@ -140,7 +138,7 @@ module EBNF
                     end
                   end
 
-          s = s.lchop.rchop if token == :string
+          s = s.lchop.rchop if token == :terminal
 
           tokens << {token: token,
                      value: s,
@@ -154,7 +152,7 @@ module EBNF
 
       parse_function_for Grammar::Type::EBNF
 
-      private def self.parse_production(tokens : Array(Token), grammar : Grammar)
+      private def self.parse_production(tokens : Array(Token), grammar : Grammar, exception? : Bool)
         rules = Array(Rule).new
         pos = -1
         accept = false
@@ -174,7 +172,11 @@ module EBNF
             rules << rule
             pos += pos_increment
           else
-            raise UnexpectedTokenError.new token, tokens[pos][:pos][0], tokens[pos][:pos][1]
+            if exception?
+              raise UnexpectedTokenError.new token, tokens[pos][:value], *tokens[pos][:pos]
+            else
+              return {nil, nil}
+            end
           end
         end
         {rules, pos}
@@ -191,7 +193,7 @@ module EBNF
 
           if token == :nonterminal
             rule.atoms << Nonterminal.new tokens[pos][:value]
-          elsif token == :string
+          elsif token == :terminal
             rule.atoms << Terminal.new tokens[pos][:value]
             grammar.terminals << tokens[pos][:value]
           elsif SPECIAL_RIGHT_CHARACTERS.includes? token
@@ -208,6 +210,7 @@ module EBNF
         {rule, pos}
       end
 
+      # OPTIMIZE
       private def self.parse_special(special_type, tokens, grammar)
         special = Special.for special_type
         raise "BUG: Unable to parse #{special_type} correctly" unless special
@@ -222,7 +225,7 @@ module EBNF
             special.rules << Rule.new [special] of Atom
           elsif token == :nonterminal
             special.rules << Rule.new [Nonterminal.new tokens[pos][:value]] of Atom
-          elsif token == :string
+          elsif token == :terminal
             special.rules << Rule.new [Terminal.new tokens[pos][:value]] of Atom
           end
         else
@@ -244,7 +247,7 @@ module EBNF
               next
             elsif token == :nonterminal
               atoms << Nonterminal.new tokens[pos][:value]
-            elsif token == :string
+            elsif token == :terminal
               atoms << Terminal.new tokens[pos][:value]
               grammar.terminals << tokens[pos][:value]
             elsif SPECIAL_RIGHT_CHARACTERS.includes? token

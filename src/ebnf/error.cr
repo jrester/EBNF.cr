@@ -9,8 +9,8 @@ module EBNF
   end
 
   class UnexpectedTokenError < Error
-    def initialize(@token : Symbol, @line : Int32, @column : Int32)
-      super("Unexpted token #{@token} at #{@line}:#{@column}")
+    def initialize(@token : Symbol, @value : String, @line : Int32, @column : Int32, @else : Array(Symbol) | Nil = nil)
+      super("Unexpted token #{@token}(#{@value}) at #{@line}:#{@column}!#{"\nExpected: #{@else.not_nil!.join(", ")}" if @else}")
     end
   end
 end

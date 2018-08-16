@@ -6,7 +6,7 @@ module EBNF
     extend Base
 
     class Parser < EBNF::Parser
-      private def self.lex(string : String, exception? : Bool, stop_on_unknown? : Bool=false)
+      private def self.lex(string : String, exception? : Bool, stop_on_unknown? : Bool = false)
         tokens = Array(Token).new
         column = 0
         line = 0
@@ -15,7 +15,7 @@ module EBNF
 
         until scanner.eos?
           if s = scanner.skip(/\h+/)
-            column += scan
+            column += s
             next
           end
 
@@ -26,9 +26,9 @@ module EBNF
                   elsif s = scanner.scan(/\<(\w|\-|\_)+\>/)
                     :nonterminal
                   elsif s = scanner.scan(/\"([^\"])*\"/)
-                    :string
+                    :terminal
                   elsif s = scanner.scan(/\'([^\'])*\'/)
-                    :string
+                    :terminal
                   elsif s = scanner.scan(/\n/)
                     line += 1
                     :newline
@@ -36,7 +36,7 @@ module EBNF
                     :EOF
                   else
                     if exception?
-                      raise UnknownTokenError.new scanner.peek 1, line, scanner.peek
+                      raise UnknownTokenError.new scanner.peek(1), line, column
                     elsif stop_on_unknown?
                       return nil
                     else
@@ -47,7 +47,7 @@ module EBNF
                   end
 
           # strip ", ' and < >
-          s = s.lchop.rchop if token == :nonterminal || token == :string
+          s = s.lchop.rchop if token == :nonterminal || token == :terminal
 
           tokens << {token: token,
                      value: s,
@@ -60,7 +60,7 @@ module EBNF
 
       parse_function_for Grammar::Type::BNF
 
-      private def self.parse_production(tokens, grammar)
+      private def self.parse_production(tokens, grammar, exception? : Bool)
         pos = -1
         accept = false
         rules = Array(Rule).new
@@ -81,10 +81,16 @@ module EBNF
             end
           elsif token == :bar
             next
-          elsif token == :nonterminal || token == :string
+          elsif token == :nonterminal || token == :terminal
             rule, pos_increment = parse_rule tokens[pos..-1], grammar
             rules << rule
             pos += pos_increment
+          else
+            if exception?
+              raise UnexpectedTokenError.new token, tokens[pos][:value], *tokens[pos][:pos], [:newline, :bar, :nonterminal, :terminal]
+            else
+              return {nil, nil}
+            end
           end
         end
         {rules, pos}
@@ -97,7 +103,7 @@ module EBNF
         tokens.each do |t|
           if t[:token] == :nonterminal
             rule.atoms << Nonterminal.new t[:value]
-          elsif t[:token] == :string
+          elsif t[:token] == :terminal
             grammar.terminals << t[:value]
             rule.atoms << Terminal.new t[:value]
           else

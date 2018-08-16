@@ -83,13 +83,10 @@ module EBNF
     )
 
     def to_s(io, grammar_type = Grammar::Type::EBNF)
-      @atoms.each_with_index do |a, i|
-        a.to_s io, grammar_type
-        if grammar_type == Grammar::Type::EBNF
-          io << ", " unless i + 1 == @atoms.size
-        else
-          io << " "
-        end
+      if grammar_type == Grammar::Type::EBNF
+        @atoms.join(", ", io) { |a, io| a.to_s io, grammar_type }
+      else
+        @atoms.join(" ", io) { |a, io| a.to_s io, grammar_type }
       end
     end
 
@@ -99,6 +96,11 @@ module EBNF
 
     def []?(index : Int32)
       @atoms[index]?
+    end
+
+    # Yields each atom
+    def each
+      @atoms.each { |a| yield a }
     end
 
     def_hash @atoms
@@ -130,10 +132,7 @@ module EBNF
     )
 
     def to_s(io, grammar_type = Grammar::Type::EBNF)
-      @rules.each_with_index do |r, i|
-        r.to_s io, grammar_type
-        io << "\n  | " if i + 1 < @rules.size
-      end
+      @rules.join("\n  | ", io) { |r, io| r.to_s io, grammar_type }
     end
 
     # Some helper functions
@@ -154,10 +153,9 @@ module EBNF
       @rules << rule
     end
 
+    # Yields each rule
     def each
-      @rules.each do |rule|
-        yield rule
-      end
+      @rules.each { |r| yield r }
     end
 
     # Check wether this production is of the form
@@ -222,7 +220,7 @@ module EBNF
     # Changes name for each key value pair
     # See `#change_name`
     def change_name(prev_new : Hash(String, String))
-      prev_new.each do | prev, new |
+      prev_new.each do |prev, new|
         change_name prev, new
       end
     end
@@ -248,6 +246,16 @@ module EBNF
     # Sets a production with *name* to *production*
     def []=(name : String, production : Production)
       @productions[name] = production
+    end
+
+    # Yields each productions' name and rules
+    def each
+      @productions.each { |k, v| yield k, v }
+    end
+
+    # Yields each productions' rules
+    def each_production
+      @productions.each_value { |production| yield production }
     end
   end
 end

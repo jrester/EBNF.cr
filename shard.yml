@@ -1,5 +1,5 @@
 name: ebnf
-version: 0.1.4
+version: 0.1.5
 description: "Parse and work with Context free Grammar"
 
 authors:

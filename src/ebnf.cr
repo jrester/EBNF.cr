@@ -1,1 +1,1 @@
-require "./ebnf/*"
+require "./ebnf/**"
