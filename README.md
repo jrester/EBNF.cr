@@ -9,8 +9,7 @@ Library for working with Context free Grammar:
 * Convert EBNF to BNF
 * Generate CNF
 * Generate First/Follow sets
-* Create DFA and LR(0) Parsing table (Under Development)
-
+* More Features comming
 
 > Note:
 > EBNF Grammar should follow the ISO/IEC 14977 standard as it is described [here](https://www.cl.cam.ac.uk/~mgk25/iso-14977.pdf)
@@ -28,28 +27,22 @@ dependencies:
 ## Usage
 
 * [Parse Grammar](#parsing)
-  - [EBNF Grammar](#parsing-ebnf)
-  - [BNF Grammar](#parsing-bnf)
-  - [Bison/YACC Grammar](#parsing-bison-yacc)
-* [Convert Grammar](#convert)
+  - [EBNF Grammar](#ebnf-grammar)
+  - [BNF Grammar](#bnf-grammar)
+  - [Bison/YACC Grammar](#bisonyacc-grammar)
+* [Convert Grammar](#conversions)
   - [EBNF to BNF](#ebnf-to-bnf)
   - [Generate CNF](#cnf)
-* [FIRST/FOLLOW Set](#first-follow)
+* [FIRST/FOLLOW Set](#firstfollow-set)
 
-<a name="parsing"/>
-
-### Prase Grammar
+## Parsing
 
 Grammar can be built from a string directly with `#from` or from a file with `#from_file` which will return an `EBNF::Grammar`.
 `#from` and `#from_file` raise UnknownTokenError when a token is not known and UnexpectedTokenError if the token was not expected.
 `#from?` and `from_file?` will return nil if an error is encountered.
 
 
-<a name="parsing-ebnf"/>
-
-
-#### EBNF Grammar
-
+### EBNF Grammar
 
 ```crystal
 require "ebnf"
@@ -93,8 +86,6 @@ ebnf = EBNF::EBNF.from grammar #=> EBNF::Grammar
 puts ebnf #=> letter = "A" | "B" | ...
 ```
 
-<a name="parsing-bnf"/>
-
 #### BNF Grammar
 
 
@@ -110,7 +101,6 @@ BNF_Grammar
 bnf = EBNF::BNF.from grammar # => EBNF::Grammar
 ```
 
-<a name="parsing-bison-yacc"/>
 
 #### Bison/Yacc Grammar
 
@@ -141,13 +131,9 @@ Every Grammar can be exported to json with `#to_json`
 and be converted to BNF grammar using `#to_bnf`.
 
 
-<a name="convert"/>
+### Conversions
 
-### Convert Grammar
-
-<a name="ebnf-to-bnf"/>
-
-#### Convert EBNF to BNF
+#### EBNF to BNF
 
 Use `Grammar#to_bnf` to convert the grammar to BNF. This will modifie the grammar.
 If you want a new grammar pass `true` to `Grammar#to_bnf`
@@ -162,7 +148,7 @@ grammar = EBNF::EBNF.from_file "grammar.y"
 grammar.to_bnf.type # =>  #=> EBNF::Grammar::GrammarType::BNF
 ```
 
-#### Generate CNF
+#### CNF
 
 ```crystal
 grammar.to_cnf #=> nil
@@ -184,8 +170,6 @@ This will run frist START, then UNIT and again START. The default order is:
 > Note: Every step will be run in the way you pass it, so in the above example START will be run two times even if that wasn't your intention.
 
 
-<a name="first-follow"/>
-
 ### FIRST/FOLLOW Set
 
 `Grammar#first_follow` generates FIRST/FOLLOW sets. It returns a Tuple with two hashes each of them containing either the first or follow table indexed by each production.
@@ -197,22 +181,12 @@ be the first production of the parsed grammar.
 grammar.first_follow
   #=> (Hash(String, Set(Terminal)), Hash(String, Set(Terminal)))
 ```
-
-### Create DFA
-
-You can export a [DFA](https://en.wikipedia.org/wiki/Deterministic_finite_automaton) from `grammar` with `EBNF::Grammar#to_dfa`.
-
-```crystal
-grammar.to_dfa #=> EBNF::DFA::State
-```
-
 ## Roadmap
 
 - [ ] Parser
   * [x] EBNF
   * [x] BNF
   * [x] Bison/YACC
-    - [ ] Bison with c/c++ Code
   * [ ] JSON
   * [ ] YAML
 - [ ] Conversions

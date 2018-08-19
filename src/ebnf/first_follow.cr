@@ -1,10 +1,10 @@
 require "./grammar"
 
 module EBNF
-  module FirstFollow
+  class Grammar
     alias FirstFollowTable = Tuple(Hash(String, Set(Terminal)))
 
-    def self.first(name : String, first_set : Hash(String, Set(Terminal))) : Set(Terminal)
+    def first(name : String, first_set : Hash(String, Set(Terminal))) : Set(Terminal)
       # Look if first (name) was already processed
       if set = first_set[name]?
         return set
@@ -25,13 +25,13 @@ module EBNF
       first_set[name]
     end
 
-    def self.first
+    def first
       first_set = Hash(String, Set(Terminal)).new
       @productions.each_key { |key| first key, first_set }
       first_set
     end
 
-    def self.follow(first_set)
+    def follow(first_set)
       follow_set = Hash(String, Set(Terminal)).new
       @productions.each_key { |key| follow_set[key] = Set(Terminal).new }
       follow_set[start] << Terminal.new "$"
@@ -66,12 +66,10 @@ module EBNF
       end
       follow_set
     end
-  end
 
-  class Grammar
     def first_follow
-      first_set = first
-      {first_set, follow first_set}
+      first_set = FirstFollow.first
+      {first_set, FirstFollow.follow first_set}
     end
   end
 end

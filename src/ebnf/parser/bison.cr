@@ -1,30 +1,13 @@
 require "string_scanner"
-require "./grammar"
-require "./macros"
+require "../grammar"
+require "../macros"
 require "./parser"
 
 module EBNF
   module Bison
-    extend EBNF::Base
+    extend Base
 
-    class Rule < EBNF::Rule
-      def initialize(@atoms = Array(Atom).new, @action = nil)
-      end
-
-      JSON.mapping(
-        atoms: Array(Atom),
-        action: String?
-      )
-
-      def to_s(io, grammar_type = Grammar::Type::Bison)
-        super(io, grammar_type)
-        io << "\t\t\t{#{@action}}" if @action
-      end
-
-      def_hash @atoms, @action
-    end
-
-    class Parser < EBNF::Parser
+    class Parser < Parser
       private def self.lex(string, exception? : Bool, stop_on_unknown? : Bool = true)
         tokens = Array(Token).new
         column = 0
@@ -92,7 +75,9 @@ module EBNF
           token = tokens[pos += 1]?.try &.[:token]
           break unless token
           lookahead = tokens[pos + 1]?.try &.[:token]
-          break unless lookahead
+          unless lookahead && token != :EOF
+            lookahead = :EOF
+          end
 
           # puts "token: #{token}, lookahead: #{lookahead}, pos: #{tokens[pos][:pos]}"
 
@@ -135,10 +120,10 @@ module EBNF
 
         tokens.each do |t|
           if t[:token] == :nonterminal
-            rule.atoms << Nonterminal.new t[:value]
+            rule << Nonterminal.new t[:value]
           elsif t[:token] == :terminal
             grammar.terminals << t[:value].not_nil!
-            rule.atoms << Terminal.new t[:value]
+            rule << Terminal.new t[:value]
           elsif t[:token] == :code
             rule.action = t[:value][1..-2] # remove { and } from code
             pos += 1

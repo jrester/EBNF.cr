@@ -1,6 +1,3 @@
-require "./bison"
-require "./ebnf"
-
 module EBNF
   module BNF
     def self.from_bison(grammar : Grammar)
@@ -24,7 +21,7 @@ module EBNF
             if (special = atom).is_a? EBNF::Special
               case special.type
               when EBNF::Special::Type::Optional
-                # TODO: When [] is surronded by two other atoms we can intruduce two new rules
+                # TODO: When [] is surrounded by two other atoms we can intruduce two new rules
                 # One with the items of Special and one without them
                 # if (prev = rule.atoms[j - 1]?) && (_next = rule.atoms[j + 1]?)
                 # production.rules.delete_at i

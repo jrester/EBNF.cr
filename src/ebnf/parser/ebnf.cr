@@ -1,72 +1,11 @@
 require "string_scanner"
-require "./grammar"
-require "./macros"
+require "../grammar"
+require "../macros"
 require "./parser"
 
 module EBNF
   module EBNF
     extend Base
-
-    class Special < Atom
-      enum Type
-        Optional,
-        Repetion,
-        Grouping,
-        Exception
-      end
-
-      def self.end_token_for(special_type : Type)
-        case special_type
-        when Type::Optional then :left_square_brace
-        when Type::Repetion then :left_curly_brace
-        when Type::Grouping then :left_brace
-        else
-          nil
-        end
-      end
-
-      def self.type_for(symbol : Symbol)
-        case symbol
-        when :right_square_brace then Type::Optional
-        when :right_curly_brace  then Type::Repetion
-        when :right_brace        then Type::Grouping
-        when :exception          then Type::Exception
-        else
-          nil
-        end
-      end
-
-      def self.for(symbol : Symbol)
-        special_type = Special.type_for symbol
-        return nil unless special_type
-        Special.new type: special_type
-      end
-
-      def initialize(@rules = Array(Rule).new, @type = Type::Optional); end
-
-      JSON.mapping(
-        rules: Array(Rule),
-        type: Type
-      )
-
-      def to_s(io, grammar_type = Grammar::Type::EBNF)
-        enclosing_symbols = case @type
-                            when Type::Optional  then {'[', ']'}
-                            when Type::Repetion  then {'{', '}'}
-                            when Type::Grouping  then {'(', ')'}
-                            when Type::Exception then {'-', nil}
-                            else
-                              {nil, nil}
-                            end
-        io << enclosing_symbols[0]
-        io << " "
-        @rules.join(" | ", io) { |r, io| r.to_s io, grammar_type }
-        io << " "
-        io << enclosing_symbols[1]
-      end
-
-      def_hash @type, @rules
-    end
 
     class Parser < ::EBNF::Parser
       SPECIAL_RIGHT_CHARACTERS = {:right_square_brace, :right_curly_brace,

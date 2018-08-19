@@ -1,11 +1,12 @@
-require "./grammar"
+require "string_scanner"
+require "../grammar"
 require "./parser"
 
 module EBNF
   module BNF
     extend Base
 
-    class Parser < EBNF::Parser
+    class Parser < Parser
       private def self.lex(string : String, exception? : Bool, stop_on_unknown? : Bool = false)
         tokens = Array(Token).new
         column = 0
@@ -102,10 +103,10 @@ module EBNF
 
         tokens.each do |t|
           if t[:token] == :nonterminal
-            rule.atoms << Nonterminal.new t[:value]
+            rule << Nonterminal.new t[:value]
           elsif t[:token] == :terminal
             grammar.terminals << t[:value]
-            rule.atoms << Terminal.new t[:value]
+            rule << Terminal.new t[:value]
           else
             break
           end
