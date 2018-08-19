@@ -49,7 +49,7 @@ module EBNF
 
   # A String which corresponds to an existing production
   class Nonterminal < Atom
-    property production : Nil|Production
+    property production : Nil | Production
 
     def initialize(@value, @production = nil)
     end

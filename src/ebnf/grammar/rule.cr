@@ -1,6 +1,5 @@
-
 module EBNF
-    # A part of a production that consits of one or more Atoms
+  # A part of a production that consits of one or more Atoms
   class Rule
     include Enumerable(Atom)
 
@@ -28,7 +27,7 @@ module EBNF
     end
 
     private def resolve(grammar : Grammar, exception? : Bool)
-      @atoms.each do | atom |
+      @atoms.each do |atom|
         if atom.is_a? Nonterminal
           production = grammar[atom.value]?
           unless production

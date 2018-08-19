@@ -6,10 +6,10 @@ require "./production"
 module EBNF
   # Representation of a CFG
   class Grammar
-    getter resolved : Bool            # Indicate wether this grammar was already resolved
+    getter resolved : Bool # Indicate wether this grammar was already resolved
     property productions : Hash(String, Production)
     property type : Type
-    property start : String|Nil
+    property start : String | Nil
     property terminals : Set(String)
 
     enum Type
@@ -74,7 +74,7 @@ module EBNF
     # If no production exists for a nonterminal raises else returns self
     def resolve
       unless @resolved
-        @productions.each_value do | production |
+        @productions.each_value do |production|
           production.resolve self
         end
         @resolved = true
@@ -86,7 +86,7 @@ module EBNF
     # If no production exists for a nonterminal returns nil else self
     def resolve?
       unless @resolved
-        @productions.each_value do | production |
+        @productions.each_value do |production|
           return nil unless production.resolve? self
         end
         @resolved = true
@@ -120,7 +120,7 @@ module EBNF
     end
 
     def each_rule
-      @productions.each_value &.each { | rule | yield rule }
+      @productions.each_value &.each { |rule| yield rule }
     end
   end
 end
