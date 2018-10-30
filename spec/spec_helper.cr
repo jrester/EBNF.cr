@@ -37,7 +37,7 @@ BNF_TEST_GRAMMAR = <<-BNF_Grammar
 <rule>           ::= <opt-whitespace> "<" <rule-name> ">" <opt-whitespace> "::=" <opt-whitespace> <expression> <line-end>
 <opt-whitespace> ::= " " <opt-whitespace> | ""
 <expression>     ::= <list> | <list> <opt-whitespace> "|" <opt-whitespace> <expression>
-<line-end>       ::= <opt-whitespace> <EOL> | <line-end> <line-end>
+<line-end>       ::= <opt-whitespace> "EOL" | <line-end> <line-end>
 <list>           ::= <term> | <term> <opt-whitespace> <list>
 <term>           ::= <literal> | "<" <rule-name> ">"
 <literal>        ::= '"' <text1> '"' | "'" <text2> "'"

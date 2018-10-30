@@ -7,7 +7,7 @@ module EBNF
       # If *stop_on_unkown* is false the whole string will be lexed and tried to be parsed
       def self.from?(input : String, stop_on_unknown? : Bool=true, resolve? : Bool=true) :  Grammar|Nil
         grammar = Parser.parse?(input, stop_on_unknown?)
-        grammar.resolve if resolve?
+        grammar.resolve if grammar && resolve?
         grammar
       end
 

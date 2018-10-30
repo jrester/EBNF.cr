@@ -1,5 +1,8 @@
 require "string_scanner"
+
 require "../grammar"
+
+require "./base"
 require "./parser"
 
 module EBNF
