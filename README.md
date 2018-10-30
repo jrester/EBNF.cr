@@ -5,11 +5,10 @@
 [![MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://en.wikipedia.org/wiki/MIT_License)
 
 Library for working with Context free Grammar:
-* Parse EBNF, BNF and Bison/Yacc Grammar
+* Parse EBNF, BNF and Bison Grammar
 * Convert EBNF to BNF
 * Generate CNF
 * Generate First/Follow sets
-* More Features comming
 
 > Note:
 > EBNF Grammar should follow the ISO/IEC 14977 standard as it is described [here](https://www.cl.cam.ac.uk/~mgk25/iso-14977.pdf)
@@ -196,7 +195,7 @@ grammar.first_follow
   * [ ] JSON
   * [ ] YAML
 - [x] FIRST/FOLLOW Set
-- [ ] DFA
+- [ ] DFA (or/and PDA)
   - [ ] Generate DFA
   - [ ] Use DFA to test wether a string belongs to a given grammar
   - [ ] LR(0) Parsing Tables

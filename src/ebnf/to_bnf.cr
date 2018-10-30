@@ -16,7 +16,7 @@ module EBNF
       grammar.type = Grammar::Type::BNF
 
       grammar.productions.each_value do |production|
-        production.rules.each_with_index do |rule, i|
+        production.rules.each do |rule|
           rule.atoms.each_with_index do |atom, j|
             if (special = atom).is_a? EBNF::Special
               case special.type

@@ -1,5 +1,6 @@
 module EBNF
   module CNF
+    # The steps to perform for createing a CNF
     enum Step
       START,
       TERM,
@@ -8,9 +9,21 @@ module EBNF
       UNIT
     end
 
+    # Introduce a new start rule
     def self.start(grammar : Grammar)
-      grammar.productions["S0"] = Production.new [Rule.new [Nonterminal.new grammar.start] of Atom]
-      grammar.start = "S0"
+      # Check if there is already a start rule of the from: S0 -> S1 $
+      unless grammar.productions[start].unit?
+        # Create a new start production to point to the previous start production
+        start_production = Production.new [Rule.new [Nonterminal.new grammar.start] of Atom]
+        # Make sure the production "S0" does not already exists
+        unless grammar.productions.keys.includes? "SO"
+          grammar.start = "SO"
+        else
+          grammar.start = "S#{start_production.hash}"
+        end
+        # Set the new start production
+        grammar[grammar.start] = start_production
+      end
     end
 
     def self.term(grammar : Grammar)
@@ -36,8 +49,9 @@ module EBNF
     end
 
     def self.bin(grammar : Grammar)
-      grammar.productions.each_value do |production|
+      grammar.each_production do |production|
         production.rules.each_with_index do |rule, i|
+          # count the nonterminals in a rule
           non_terminal_count = 0
           rule.atoms.each do |atom|
             if atom.is_a? Nonterminal
@@ -45,6 +59,7 @@ module EBNF
             end
           end
 
+          # if there are more than 2 nonterminal in a rule we introduce a new production for it
           if non_terminal_count > 2
             remain = rule.atoms.shift
             grammar.productions["n_#{rule.hash}"] = Production.new [Rule.new rule.atoms]
@@ -57,6 +72,7 @@ module EBNF
     def self.del(grammar : Grammar)
     end
 
+    # elimanites all unit rules
     def self.unit(grammar : Grammar)
       grammar.productions.each_value do |production|
         production.rules.each_with_index do |rule, i|
@@ -70,20 +86,31 @@ module EBNF
         end
       end
     end
+
+    def self.grammar_to_cnf(grammar : Grammar, order : Array(CNF::Step))
+      order.each do |step|
+        case step
+        when CNF::Step::START then CNF.start grammar
+        when CNF::Step::TERM  then CNF.term grammar
+        when CNF::Step::BIN   then CNF.bin grammar
+        when CNF::Step::DEL   then CNF.del grammar
+        when CNF::Step::UNIT  then CNF.unit grammar
+        end
+      end
+      grammar
+    end
   end
 
   class Grammar
-    # Transforms this grammar to CNF Grammar
+    # Transforms this grammar to CNF Grammar based on *order* and returns self
+    # The default order is usally fine
     def to_cnf(order = [CNF::Step::START, CNF::Step::TERM, CNF::Step::BIN, CNF::Step::DEL, CNF::Step::UNIT])
-      order.each do |step|
-        case step
-        when CNF::Step::START then CNF.start self
-        when CNF::Step::TERM  then CNF.term self
-        when CNF::Step::BIN   then CNF.bin self
-        when CNF::Step::DEL   then CNF.del self
-        when CNF::Step::UNIT  then CNF.unit self
-        end
-      end
+      CNF.grammar_to_cnf self, order
+    end
+
+    # Same as `to_cnf` but clones self and returns the new grammar
+    def to_cnf!(order = [CNF::Step::START, CNF::Step::TERM, CNF::Step::BIN, CNF::Step::DEL, CNF::Step::UNIT])
+      CNF.grammar_to_cnf self.dup, order
     end
   end
 end
