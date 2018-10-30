@@ -93,7 +93,7 @@ module EBNF
 
       parse_function_for Grammar::Type::EBNF
 
-      private def self.parse_production(tokens : Array(Token), grammar : Grammar, exception? : Bool)
+      def self.parse_production(tokens : Array(Token), grammar : Grammar, exception? : Bool)
         rules = Array(Rule).new
         pos = -1
         accept = false
@@ -123,7 +123,7 @@ module EBNF
         {rules, pos}
       end
 
-      private def self.parse_rule(tokens : Array(Token), grammar : Grammar)
+      def self.parse_rule(tokens : Array(Token), grammar : Grammar)
         rule = Rule.new
         accept = false
         pos = -1
@@ -152,7 +152,7 @@ module EBNF
       end
 
       # OPTIMIZE
-      private def self.parse_special(special_type, tokens, grammar)
+      def self.parse_special(special_type, tokens, grammar)
         special = Special.for special_type
         raise "BUG: Unable to parse #{special_type} correctly" unless special
         pos = 0

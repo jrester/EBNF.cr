@@ -36,6 +36,7 @@ module EBNF
                      when Type::EBNF  then "#{key} = "
                      when Type::BNF   then "<#{key}> ::= "
                      when Type::Bison then "#{key}:\n  "
+                     else raise InvalidGrammarType.new @type
                      end
         io << definition
         p.to_s io, @type
@@ -106,6 +107,14 @@ module EBNF
 
     # Sets a production with *name* to *production*
     def []=(name : String, production : Production)
+      @productions[name] = production
+    end
+
+    def add_production(name : String, rules : Array(Rules))
+      add_production name, Production.new(rules)
+    end
+
+    def add_production(name : String, production : Production)
       @productions[name] = production
     end
 

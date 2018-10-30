@@ -68,7 +68,7 @@ module EBNF
 
       parse_function_for Grammar::Type::Bison
 
-      private def self.parse_production(tokens, grammar, exception? : Bool)
+      def self.parse_production(tokens, grammar, exception? : Bool)
         pos = -1
         accept = false
         rules = Array(::EBNF::Rule).new
@@ -116,7 +116,7 @@ module EBNF
         {rules, pos}
       end
 
-      private def self.parse_rule(tokens, grammar)
+      def self.parse_rule(tokens, grammar)
         rule = Bison::Rule.new
         pos = -1
 

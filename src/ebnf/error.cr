@@ -15,4 +15,10 @@ module EBNF
       super("Unexpted token #{@token}(#{@value}) at #{@line}:#{@column}!#{"\nExpected: #{@else.not_nil!.join(", ")}" if @else}")
     end
   end
+
+  class InvalidGrammarType < Exception
+    def initialize(grammar_type : String|Int32)
+      super("Invalid grammar type: #{grammar_type}")
+    end
+  end
 end
