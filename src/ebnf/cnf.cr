@@ -9,15 +9,17 @@ module EBNF
       UNIT
     end
 
+    DEFAULT_ORDER = [Step::START, Step::TERM, Step::BIN, Step::DEL, Step::UNIT]
+
     # Introduce a new start rule
     def self.start(grammar : Grammar)
-      # Check if there is already a start rule of the from: S0 -> S1 $
-      unless grammar.productions[start].unit?
+      # Check if there is already a start rule of the from: S' -> S $
+      unless grammar.productions[grammar.start].unit?
         # Create a new start production to point to the previous start production
         start_production = Production.new [Rule.new [Nonterminal.new grammar.start] of Atom]
-        # Make sure the production "S0" does not already exists
-        unless grammar.productions.keys.includes? "SO"
-          grammar.start = "SO"
+        # Make sure the production "S'" does not already exists
+        unless grammar.productions.keys.includes? "S\'"
+          grammar.start = "S\'"
         else
           grammar.start = "S#{start_production.hash}"
         end
@@ -27,8 +29,8 @@ module EBNF
     end
 
     def self.term(grammar : Grammar)
-      grammar.productions.each_value do |production|
-        production.rules.each do |rule|
+      grammar.each_production do |production|
+        production.each do |rule|
           terminal_count = 0
           rule.atoms.each do |atom|
             if atom.is_a? Terminal
@@ -74,11 +76,14 @@ module EBNF
 
     # elimanites all unit rules
     def self.unit(grammar : Grammar)
-      grammar.productions.each_value do |production|
+      grammar.each_production do |production|
         production.rules.each_with_index do |rule, i|
+          # Check wether production is of form A := B
           if rule.atoms.size == 1
             if (atom = rule.atoms[0]).is_a? Nonterminal
-              rule.atoms.clear
+              # Remove the unit rule
+              production.delete_at i
+              # Get rules of for nonterminal in unit production
               rules = grammar.productions[atom.value].rules
               production.rules.concat rules
             end
@@ -104,12 +109,12 @@ module EBNF
   class Grammar
     # Transforms this grammar to CNF Grammar based on *order* and returns self
     # The default order is usally fine
-    def to_cnf(order = [CNF::Step::START, CNF::Step::TERM, CNF::Step::BIN, CNF::Step::DEL, CNF::Step::UNIT])
+    def to_cnf!(order = CNF::DEFAULT_ORDER)
       CNF.grammar_to_cnf self, order
     end
 
     # Same as `to_cnf` but clones self and returns the new grammar
-    def to_cnf!(order = [CNF::Step::START, CNF::Step::TERM, CNF::Step::BIN, CNF::Step::DEL, CNF::Step::UNIT])
+    def to_cnf(order = CNF::DEFAULT_ORDER)
       CNF.grammar_to_cnf self.dup, order
     end
   end

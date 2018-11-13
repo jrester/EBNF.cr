@@ -9,9 +9,12 @@ Library for working with Context free Grammar:
 * Convert EBNF to BNF
 * Generate CNF
 * Generate First/Follow sets
+* Generate LR(0)/LR(1)/LALR(1)/GLR parsing Tables
 
 > Note:
 > EBNF Grammar should follow the ISO/IEC 14977 standard as it is described [here](https://www.cl.cam.ac.uk/~mgk25/iso-14977.pdf)
+
+_Warning: This Project is experimental. Its APIs are not yet solidified, and are subject to change at any time._
 
 ## Installation
 
@@ -33,6 +36,13 @@ dependencies:
   - [EBNF to BNF](#ebnf-to-bnf)
   - [Generate CNF](#cnf)
 * [FIRST/FOLLOW Set](#firstfollow-set)
+* [Parsing tables]()
+  - [LR(0)]()
+  - [LR(1)]()
+  - [LALR(1)]()
+  - [LL(0)]()
+  - [LL(1)]()
+  - [GLR]()
 
 ## Parsing
 
@@ -195,11 +205,13 @@ grammar.first_follow
   * [ ] JSON
   * [ ] YAML
 - [x] FIRST/FOLLOW Set
-- [ ] DFA (or/and PDA)
-  - [ ] Generate DFA
-  - [ ] Use DFA to test wether a string belongs to a given grammar
-  - [ ] LR(0) Parsing Tables
-- [ ] 100% Test coverage :)
+- [ ] Parsig tables
+  - [ ] LR(1)
+  - [ ] LR(0)
+  - [ ] LALR(1)
+  - [ ] LL(0)
+  - [ ] LL(1)
+  - [ ] GLR
 
 ## Contributing
 
@@ -211,4 +223,4 @@ grammar.first_follow
 
 ## Contributors
 
-- [jrester](https://github.com/jrester) jrester - creator, maintainer
+- [jrester](https://github.com/jrester) - creator, maintainer

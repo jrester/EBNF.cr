@@ -8,11 +8,17 @@ module EBNF
     def to_s(io, grammar_type)
       raise "Atom#to_s not implemented because it is abstract!"
     end
+
+    abstract def clone
   end
 
   # A String like 'a' or '+' in a grammar which does not represent a rule but a final symbol/word
   class Terminal < Atom
     def initialize(@value)
+    end
+
+    def clone
+      Terminal.new @value.clone
     end
 
     JSON.mapping(
@@ -52,6 +58,10 @@ module EBNF
     property production : Nil | Production
 
     def initialize(@value, @production = nil)
+    end
+
+    def clone
+      Nonterminal.new @value.clone, nil
     end
 
     JSON.mapping(
@@ -121,6 +131,16 @@ module EBNF
       def initialize(@rules = Array(Rule).new, @type = Type::Optional)
       end
 
+      def clone
+        Special.new @rules.clone, @type
+      end
+
+      def resolve(grammar : Grammar, exception? : Bool)
+        @rules.each do |rule|
+          return nil unless exception? ? rule.resolve? grammar : rule.resolve grammar
+        end
+      end
+
       JSON.mapping(
         rules: Array(Rule),
         type: Type
@@ -142,9 +162,7 @@ module EBNF
         io << enclosing_symbols[1]
       end
 
-      def <<(item : Rule)
-        @rules << item
-      end
+      delegate :<<, :size, :empty?, to: @rules
 
       def_hash @type, @rules
     end

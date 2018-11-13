@@ -26,12 +26,19 @@ module EBNF
     end
 
     def first
+      return @first_set if @first_set
       first_set = Hash(String, Set(Terminal)).new
       @productions.each_key { |key| first key, first_set }
-      first_set
+      @first_set = first_set
+    end
+
+    def follow
+      follow @first_set
     end
 
     def follow(first_set)
+      return @follow_set if follow_set
+      return unless first_set
       follow_set = Hash(String, Set(Terminal)).new
       @productions.each_key { |key| follow_set[key] = Set(Terminal).new }
       follow_set[start] << Terminal.new "$"
@@ -64,12 +71,14 @@ module EBNF
           updated = true
         end
       end
-      follow_set
+      @follow_set = follow_set
     end
 
     def first_follow
-      first_set = FirstFollow.first
-      {first_set, FirstFollow.follow first_set}
+      {@first_set, @follow_set} if @first_set && @follow_set
+      first
+      follow
+      {@first_set, @follow_set}
     end
   end
 end

@@ -11,7 +11,8 @@ module EBNF
       when ::EBNF::Grammar::Type::EBNF  then @parser = ::EBNF::EBNF::Parser
       when ::EBNF::Grammar::Type::BNF   then @parser = ::EBNF::BNF::Parser
       when ::EBNF::Grammar::Type::Bison then @parser = ::EBNF::Bison::Parser
-      else raise InvalidGrammarType.new grammar_type.to_s
+      else
+        raise InvalidGrammarType.new grammar_type.to_s
       end
       @current_production = ""
     end

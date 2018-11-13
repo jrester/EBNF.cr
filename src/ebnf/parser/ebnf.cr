@@ -10,6 +10,13 @@ module EBNF
     extend Base
 
     class Parser < ::EBNF::Parser
+      TOKENS = {
+        /=/  => :definition,
+        /,/  => :concation,
+        /;/  => :termination,
+        /\[/ => :right_square_brace,
+        /\]/ => :left_square_brace,
+      }
       SPECIAL_RIGHT_CHARACTERS = {:right_square_brace, :right_curly_brace,
                                   :right_brace, :exception}
 
@@ -31,6 +38,15 @@ module EBNF
             column += s
             next
           end
+
+          # TOKENS.each_key do |regex|
+          #  if s = scanner.scan regex
+          #    token = TOKENS[regex][0]
+          #    if (callback = TOKENS[regex][1]?)
+          #      callback.call
+          #    end
+          #  end
+          # end
 
           token = if s = scanner.scan(/=/)
                     :definition
@@ -154,7 +170,7 @@ module EBNF
       # OPTIMIZE
       def self.parse_special(special_type, tokens, grammar)
         special = Special.for special_type
-        raise "BUG: Unable to parse #{special_type} correctly" unless special
+        raise ParserError.new "BUG: Unable to parse #{special_type} correctly" unless special
         pos = 0
         # For an Exception we only need to parse the next token
         if special.type == Special::Type::Exception
@@ -171,7 +187,7 @@ module EBNF
           end
         else
           end_token = Special.end_token_for special.type
-          raise "Unknown end token for #{special.type}" unless end_token
+          raise ParserError.new "Unknown end token for #{special.type}" unless end_token
           atoms = Array(Atom).new
           accept = false
 

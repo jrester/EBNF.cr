@@ -6,6 +6,10 @@ module EBNF
     def initialize(@atoms = Array(Atom).new)
     end
 
+    def clone
+      Rule.new @atoms.clone
+    end
+
     JSON.mapping(
       atoms: Array(Atom)
     )
@@ -16,6 +20,10 @@ module EBNF
       else
         @atoms.join(" ", io) { |a, io| a.to_s io, grammar_type }
       end
+    end
+
+    def pretty_print(pp)
+      pp.text self.to_s
     end
 
     def resolve(grammar : Grammar)
@@ -38,26 +46,13 @@ module EBNF
             end
           end
           atom.production = production
+        elsif atom.is_a? EBNF::Special
+          return nil unless atom.resolve grammar, exception?
         end
       end
     end
 
-    def [](index : Int32)
-      @atoms[index]
-    end
-
-    def []?(index : Int32)
-      @atoms[index]?
-    end
-
-    def <<(atom : Atom)
-      @atoms << atom
-    end
-
-    # Yields each atom
-    def each
-      @atoms.each { |a| yield a }
-    end
+    delegate :[], :[]?, :<<, :each, :size, :empty?, to: @atoms
 
     def_hash @atoms
   end
@@ -77,6 +72,10 @@ module EBNF
   module Bison
     class Rule < Rule
       def initialize(@atoms = Array(Atom).new, @action = nil)
+      end
+
+      def clone
+        Bison::Rule.new @atoms.clone, @action.clone
       end
 
       JSON.mapping(

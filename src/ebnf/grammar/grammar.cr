@@ -11,6 +11,8 @@ module EBNF
     property type : Type
     property start : String | Nil
     property terminals : Set(String)
+    getter first_set : Hash(String, Set(Terminal))? = nil
+    getter follow_set : Hash(String, Set(Terminal))? = nil
 
     enum Type
       EBNF,
@@ -30,18 +32,29 @@ module EBNF
       @resolved = false
     end
 
-    def to_s(io)
+    def clone
+      clone = Grammar.new @productions.clone, @type, @start.clone, @terminals.clone
+      clone.resolve
+    end
+
+    def to_s(io = IO::Memory.new)
       @productions.each do |key, p|
         definition = case @type
                      when Type::EBNF  then "#{key} = "
                      when Type::BNF   then "<#{key}> ::= "
                      when Type::Bison then "#{key}:\n  "
-                     else raise InvalidGrammarType.new @type
+                     else
+                       raise InvalidGrammarType.new @type
                      end
         io << definition
         p.to_s io, @type
         io << "\n\n"
       end
+      io
+    end
+
+    def pretty_print(pp)
+      pp.text self.to_s
     end
 
     # Gets first production in grammar
@@ -53,6 +66,34 @@ module EBNF
     # Gets all nonterminals in this grammar
     def nonterminals
       @productions.keys
+    end
+
+    def nonterminal?(sym : Atom)
+      if sym.is_a? Nonterminal
+        nonterminal? sym.value
+      else
+        false
+      end
+    end
+
+    def nonterminal?(sym : String)
+      @productions[sym]? ? true : false
+    end
+
+    def terminal?(sym)
+      if sym.is_a? Terminal
+        nonterminal? sym.value
+      else
+        false
+      end
+    end
+
+    def terminal?(sym)
+      @terminals.includes? sym
+    end
+
+    def symbols
+      nonterminals + terminals.to_a
     end
 
     # Changes name for each key value pair
@@ -130,6 +171,14 @@ module EBNF
 
     def each_rule
       @productions.each_value &.each { |rule| yield rule }
+    end
+
+    def new_start(name : String? = nil)
+      start_production = Production.new [Rule.new [Nonterminal.new start] of Atom]
+      start_name = (name ? name : "S_#{start_production.hash}")
+      add_production start_name, start_production
+      @start = start_name
+      nil
     end
   end
 end
