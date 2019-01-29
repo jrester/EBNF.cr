@@ -1,19 +1,5 @@
 require "./spec_helper"
 
-bison_grammar = <<-Grammar
-root:
-    foo             { puts "foo" }
-    | bar           { puts "bar" }
-
-foo:
-    A B
-    | B B
-
-bar:
-    B A
-    | A B
-Grammar
-
 bison_maleformed = <<-Maleformed_Grammar
 root:
   789ß
@@ -27,7 +13,7 @@ Bison_Grammar
 describe "Bison" do
   describe "#from" do
     it "returns grammar of type Bison with terminals 'A' and 'B'" do
-      grammar = EBNF::Bison.from bison_grammar
+      grammar = EBNF::Bison.from BISON_TEST_GRAMMAR_SHORT
       grammar.should be_a(EBNF::Grammar)
       grammar.type.should eq(EBNF::Grammar::Type::Bison)
     end

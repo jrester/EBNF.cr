@@ -44,7 +44,12 @@ module EBNF
       @rules.size == 1 && @rules[0].is_a? Nonterminal
     end
 
-    delegate :[], :[]?, :[]=, :<<, to: @rules
+    # Crystal version 0.25.0 can't handle delegation of []= correctly
+    def []=(index : Int32, rule : Rule)
+      @rules[index] = rule
+    end
+
+    delegate :[], :[]?, :<<, to: @rules
     delegate :size, :delete_at, :delete, :empty?, :each, to: @rules
 
     def_hash @rules

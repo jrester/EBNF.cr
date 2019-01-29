@@ -33,7 +33,7 @@ dependencies:
   - [BNF Grammar](#bnf-grammar)
   - [Bison/YACC Grammar](#bisonyacc-grammar)
 * [Convert Grammar](#conversions)
-  - [EBNF to BNF](#ebnf-to-bnf)
+  - [Convert to BNF](#convert-to-bnf)
   - [Generate CNF](#cnf)
 * [FIRST/FOLLOW Set](#firstfollow-set)
 * [Parsing tables]()
@@ -142,12 +142,13 @@ and be converted to BNF grammar using `#to_bnf`.
 
 ### Conversions
 
-#### EBNF to BNF
+#### Convert Grammar
 
-Use `Grammar#to_bnf` to convert the grammar to BNF. This will modifie the grammar.
-If you want a new grammar pass `true` to `Grammar#to_bnf`
+Use `Grammar#to_bnf` to convert a grammar to BNF. This function transforms the grammar in place.
+If you want to still use your old, unconverted grammar use `Grammar#to_bnf!` to
+retrive a copy of the Grammar.
 
-> Note: This may intruduce new production each of them with a unique name like 'Special_350257660880508218'
+> Note: This may introduce new production each of them with a unique name like 'Special_350257660880508218'
 > To make sure each name is unique the hash value of the rules in a special segment is used.
 
 ```crystal

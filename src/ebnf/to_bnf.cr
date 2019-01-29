@@ -70,7 +70,7 @@ module EBNF
 
   class Grammar
     # Converts self to BNF grammar. Returns nil if already BNF
-    def to_bnf
+    def to_bnf!
       dup = self.clone
       case @type
       when Type::BNF   then dup
@@ -82,7 +82,7 @@ module EBNF
       dup
     end
 
-    def to_bnf!
+    def to_bnf
       case @type
       when Type::BNF   then self
       when Type::EBNF  then BNF.from_ebnf self

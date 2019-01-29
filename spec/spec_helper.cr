@@ -53,7 +53,21 @@ BNF_TEST_GRAMMAR = <<-BNF_Grammar
 <rule-char>      ::= <letter> | <digit> | "-"
 BNF_Grammar
 
-BISON_TEST_GRAMMAR = <<-Bison_Grammar
+BISON_TEST_GRAMMAR_SHORT = <<-Bison_Grammar
+root:
+    foo             { puts "foo" }
+    | bar           { puts "bar" }
+
+foo:
+    A B
+    | B B
+
+bar:
+    B A
+    | A B
+Bison_Grammar
+
+BISON_TEST_GRAMMAR_LONG = <<-Bison_Grammar
 primary_expression
  : IDENTIFIER
  | CONSTANT
