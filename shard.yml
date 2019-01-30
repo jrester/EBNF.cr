@@ -8,3 +8,10 @@ authors:
 crystal: 0.27.0
 
 license: MIT
+
+targets:
+  ebnf:
+    main: cli.cr
+
+executables:
+  - ebnf

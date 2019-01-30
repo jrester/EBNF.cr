@@ -36,8 +36,8 @@ dependencies:
   - [Convert to BNF](#convert-to-bnf)
   - [Generate CNF](#cnf)
 * [FIRST/FOLLOW Set](#firstfollow-set)
-* [Parsing tables]()
-  - [LR(0)]()
+* [Parsing tables](#parsing-tables)
+  - [LR(0)](lr(0))
   - [LR(1)]()
   - [LALR(1)]()
   - [LL(0)]()
@@ -47,17 +47,23 @@ dependencies:
 ## Parsing
 
 Grammar can be built from a string directly with `#from` or from a file with `#from_file` which will return an `EBNF::Grammar`.
-`#from` and `#from_file` raise UnknownTokenError when a token is not known and UnexpectedTokenError if the token was not expected.
+`#from` and `#from_file` raise `UnknownTokenError` when a token is not known and `UnexpectedTokenError` if the token was not expected.
 `#from?` and `from_file?` will return nil if an error is encountered.
 
+```crystal
+require "ebnf"
+
+EBNF::Grammar.from_file "grammar.y" #=> EBNF::Grammar
+```
+
+> Note: This will try to recognize your Grammar and will throw an UnkownGrammarError
+> if no grammar was recognzized. If you already know which grammar type you want to parse
+> use `EBNF::<EBNF/BNF/Bison>.from` or see the examples below.
 
 ### EBNF Grammar
 
 ```crystal
 require "ebnf"
-
-# Read from a file
-ebnf = EBNF::EBNF.from_file "grammar.y" #=> EBNF::Grammar
 
 grammar = <<-Grammar
 letter = "A" | "B" | "C" | "D" | "E" | "F" | "G"
@@ -191,6 +197,34 @@ be the first production of the parsed grammar.
 grammar.first_follow
   #=> (Hash(String, Set(Terminal)), Hash(String, Set(Terminal)))
 ```
+
+### Parsing Tables
+
+#### LR(0)
+
+```crystal
+ebnf = <<-Grammar
+e = e "*" b | e '+' b | b;
+b = '0' | '1';
+Grammar
+
+grammar = EBNF::EBNF.from ebnf
+pp EBNF::LR.generate grammar # =>
+
+0     {"e" => [{:goto, 1_u64}], "b" => [{:goto, 2_u64}]}
+1     {"\"*\"" => [{:shift, 3_u64}], "\"+\"" => [{:shift, 4_u64}], "EOS" => [{:accept, 0_u64}]}
+2     {"*" => [{:reduce, "e"}], "+" => [{:reduce, "e"}], "0" => [{:reduce, "e"}], "1" => [{:reduce, "e"}]}
+3     {"b" => [{:goto, 5_u64}], "\"0\"" => [{:shift, 6_u64}], "\"1\"" => [{:shift, 7_u64}]}
+4     {"b" => [{:goto, 8_u64}], "\"0\"" => [{:shift, 9_u64}], "\"1\"" => [{:shift, 10_u64}]}
+5     {"*" => [{:reduce, "e"}], "+" => [{:reduce, "e"}], "0" => [{:reduce, "e"}], "1" => [{:reduce, "e"}]}
+6     {"*" => [{:reduce, "b"}], "+" => [{:reduce, "b"}], "0" => [{:reduce, "b"}], "1" => [{:reduce, "b"}]}
+7     {"*" => [{:reduce, "b"}], "+" => [{:reduce, "b"}], "0" => [{:reduce, "b"}], "1" => [{:reduce, "b"}]}
+8     {"*" => [{:reduce, "e"}], "+" => [{:reduce, "e"}], "0" => [{:reduce, "e"}], "1" => [{:reduce, "e"}]}
+9     {"*" => [{:reduce, "b"}], "+" => [{:reduce, "b"}], "0" => [{:reduce, "b"}], "1" => [{:reduce, "b"}]}
+10     {"*" => [{:reduce, "b"}], "+" => [{:reduce, "b"}], "0" => [{:reduce, "b"}], "1" => [{:reduce, "b"}]}
+
+```
+
 ## Roadmap
 
 - [ ] Parser
@@ -207,7 +241,7 @@ grammar.first_follow
   * [ ] YAML
 - [x] FIRST/FOLLOW Set
 - [ ] Parsig tables
-  - [ ] LR(1)
+  - [x] LR(1)
   - [ ] LR(0)
   - [ ] LALR(1)
   - [ ] LL(0)

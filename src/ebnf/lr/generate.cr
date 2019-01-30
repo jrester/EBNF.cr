@@ -88,14 +88,10 @@ module EBNF::LR
 
   def generate(grammar : Grammar)
     grammar = grammar.to_bnf if grammar.type == ::EBNF::Grammar::Type::EBNF
-    grammar = grammar.to_cnf
-    grammar.first_follow
 
     unless grammar[grammar.start].unit?
       grammar.new_start
     end
-
-    grammar.follow_set
 
     TransitionTable.generate grammar
   end

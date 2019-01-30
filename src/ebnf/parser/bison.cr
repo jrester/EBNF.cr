@@ -36,7 +36,7 @@ module EBNF
                     :terminal
                   elsif s = scanner.scan(/\'([^\'])*'/)
                     s = s.lchop.rchop
-                    :terminal
+                    :terminals
                   elsif s = scanner.scan(/\{[^\}]*\}/)
                     line += s.count "\n"
                     :code

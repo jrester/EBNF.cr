@@ -29,6 +29,10 @@ describe "Bison" do
     end
   end
 
+  describe "#from_file" do
+    grammar = EBNF::Bison.from_file "./spec/bison.grammar"
+  end
+
   describe "#lex" do
     it "raises UnknownTokenError" do
       expect_raises(EBNF::UnknownTokenError) do

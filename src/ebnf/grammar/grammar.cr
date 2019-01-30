@@ -32,6 +32,42 @@ module EBNF
       @resolved = false
     end
 
+    # Parses given string and returns `Grammar` or nil on unexpected/unknown token
+    # If *stop_on_unkown* is false the whole string will be lexed and tried to be parsed
+    def self.from?(input : String, stop_on_unknown? : Bool=true, resolve? : Bool=true, start : String|Symbol?=nil) :  Grammar|Nil
+      case TypeRecognizer.recognize input
+      when Type::EBNF
+        EBNF.from?(input, stop_on_unkown, resolve?, start)
+      when Type::BNF
+        BNF.from?(input, stop_on_unkown, resolve?, start)
+      when Type::Bison
+        Bison.from?(input, stop_on_unkown, resolve?, start)
+      end
+    end
+
+    # Parses the given string and returns `Grammar` and raises UnexpectedTokenError or UnknownTokenError
+    def self.from(input : String, resolve? : Bool=true, start : String|Symbol?=nil) : Grammar
+      case TypeRecognizer.recognize input
+      when Type::EBNF
+        EBNF.from?(input, resolve?, start)
+      when Type::BNF
+        BNF.from?(input, resolve?, start)
+      when Type::Bison
+        Bison.from?(input, resolve?, start)
+      end
+    end
+
+    # Parsers the given file and returns `Grammar` and raises UnexpectedTokenError or UnknownTokenError
+    def self.from_file(path : String, resolve? : Bool=true, start : String|Symbol?=nil) : Grammar
+      from File.read(path), resolve?, start
+    end
+
+    # Parses the given file and returns `Grammar` or nil on unexpected/unknown token
+    # If *stop_on_unkown* is false the whole string will be lexed and tried to be parsed
+    def self.from_file?(path : String, stop_on_unknwon? : Bool=true, resolve? : Bool=true, start : String|Symbol?=nil) : Grammar|Nil
+      from? File.read(path), stop_on_unknown?, resolve?, start
+    end
+
     def clone
       clone = Grammar.new @productions.clone, @type, @start.clone, @terminals.clone
       clone.resolve

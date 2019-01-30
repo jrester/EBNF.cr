@@ -64,7 +64,6 @@ module EBNF
           end
         end
       end
-      grammar
     end
   end
 

@@ -28,6 +28,12 @@ module EBNF
     end
   end
 
+  class UnkownGrammarError < Error
+    def initialize
+      super("Couldn't recognize grammar type!")
+    end
+  end
+
   class ConversionError < Error
   end
 end
