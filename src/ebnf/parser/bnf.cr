@@ -1,5 +1,3 @@
-require "string_scanner"
-
 require "../grammar"
 
 require "./base"
@@ -10,113 +8,132 @@ module EBNF
     extend Base
 
     class Parser < Parser
-      private def self.lex(string : String, exception? : Bool, stop_on_unknown? : Bool = false)
-        tokens = Array(Token).new
-        column = 0
-        line = 0
+      private def self._parse(input : String, exception? : Bool = true)
+        grammar = Grammar.new type: Grammar::Type::BNF
+        line = 1
+        col = 0
 
-        scanner = StringScanner.new string
+        in_string_double = false
+        in_string_single = false
+        in_nonterminal = false
 
-        until scanner.eos?
-          if s = scanner.skip(/\h+/)
-            column += s
+        cur_rule : Rule? = nil
+        cur_production : Production? = nil
+
+        terminal = String.new
+        nonterminal = String.new
+        string_stack = Array(String).new
+
+        index = -1
+        while (char = input[index += 1]?)
+          col += 1
+
+          case char
+          when ' '
+            next
+          when '\n'
+            line += 1
+            col = 0
+            next
+          when '\\'
+            if in_string_double || in_string_single
+              terminal += '\\'
+              terminal += input[index += 1]
+              col += 1
+            elsif in_nonterminal
+              nonterminal += '\\'
+              nonterminal += input[index += 1]
+              col += 1
+            end
+            next
+          when '"'
+            next if in_string_single
+            if in_string_double
+              if cur_rule
+                cur_rule << Terminal.new terminal
+                grammar.terminals << terminal
+              end
+              terminal = String.new
+            end
+            in_string_double ? (in_string_double = false) : (in_string_double = true)
+            next
+          when '\''
+            next if in_string_double
+            if in_string_single
+              if cur_rule
+                cur_rule << Terminal.new terminal
+                grammar.terminals << terminal
+              end
+              terminal = String.new
+            end
+            in_string_single ? (in_string_single = false) : (in_string_single = true)
+            next
+          when '>'
+            if in_nonterminal
+              grammar.nonterminals << nonterminal
+              if cur_rule
+                cur_rule << Nonterminal.new nonterminal
+              else
+                string_stack << nonterminal
+              end
+              nonterminal = String.new
+            end
+            in_nonterminal = false
             next
           end
 
-          token = if s = scanner.scan(/::=/)
-                    :definition
-                  elsif s = scanner.scan(/\|/)
-                    :bar
-                  elsif s = scanner.scan(/\<(\w|\-|\_)+\>/)
-                    :nonterminal
-                  elsif s = scanner.scan(/\"([^\"])*\"/)
-                    :terminal
-                  elsif s = scanner.scan(/\'([^\'])*\'/)
-                    :terminal
-                  elsif s = scanner.scan(/\n/)
-                    line += 1
-                    :newline
-                  elsif s = scanner.scan(/$/)
-                    :EOF
-                  else
-                    if exception?
-                      raise UnknownTokenError.new scanner.peek(1), line, column
-                    elsif stop_on_unknown?
-                      return nil
-                    else
-                      s = scanner.peek 1
-                      scanner.offset += 1
-                      :unknown
-                    end
-                  end
-
-          # strip ", ' and < >
-          s = s.lchop.rchop if token == :nonterminal || token == :terminal
-
-          tokens << {token: token,
-                     value: s,
-                     pos:   {line, column}}
-
-          token != :newline ? (column += s.size) : (column = 0)
-        end
-        tokens
-      end
-
-      parse_function_for Grammar::Type::BNF
-
-      def self.parse_production(tokens, grammar, exception? : Bool)
-        pos = -1
-        accept = false
-        rules = Array(Rule).new
-
-        until accept || pos >= tokens.size
-          token = tokens[pos += 1]?.try &.[:token]
-          break unless token
-          lookahead = tokens[pos + 1]?.try &.[:token]
-          break unless lookahead
-
-          # puts "token: #{token}, lookahead: #{lookahead}, pos: #{pos}"
-
-          if token == :newline
-            if lookahead == :nonterminal
-              accept = true
-            else
+          if in_string_double || in_string_single
+            terminal += char
+            next
+          elsif in_nonterminal
+            if char.ascii?
+              nonterminal += char
               next
             end
-          elsif token == :bar
-            next
-          elsif token == :nonterminal || token == :terminal
-            rule, pos_increment = parse_rule tokens[pos..-1], grammar
-            rules << rule
-            pos += pos_increment
-          else
-            if exception?
-              raise UnexpectedTokenError.new token, tokens[pos][:value], *tokens[pos][:pos], [:newline, :bar, :nonterminal, :terminal]
+          end
+
+          case char
+          when ':'
+            if (input[index + 1] == ':')
+              if (input[index + 2] == '=')
+                # Create new Production with name of prev nonterminal
+                cur_production = Production.new
+                if cur_rule
+                  grammar[cur_rule.pop.as(Nonterminal).value] = cur_production
+                else
+                  grammar[string_stack.pop] = cur_production
+                end
+                if (next_char = next_char_no_whitespace(input, index)) == '|'
+                  cur_rule = Empty.new
+                else
+                  cur_rule = Rule.new
+                end
+                cur_production << cur_rule
+                index += 2
+                col += 2
+              else
+                error raise ParserError.new "Expected '=' after '::'", input, {line: line, col: col - 1, length: 2}
+              end
+            elsif (input[index + 1]? == '=')
+              error raise ParserError.new "Expected another ':' between ':' and '='", input, {line: line, col: col - 1, length: 2}
             else
-              return {nil, nil}
+              error raise ParserError.new "Unexpected ':'! You may want to replace it with '::='", input, {line: line, col: col, length: 1}
             end
-          end
-        end
-        {rules, pos}
-      end
-
-      def self.parse_rule(tokens, grammar)
-        rule = Rule.new
-        pos = -1
-
-        tokens.each do |t|
-          if t[:token] == :nonterminal
-            rule << Nonterminal.new t[:value]
-          elsif t[:token] == :terminal
-            grammar.terminals << t[:value]
-            rule << Terminal.new t[:value]
+          when '|'
+            error raise ParserError.new "Unexpted '|'", input, {line: line, col: col, length: 1} unless cur_production
+            if cur_production.empty?
+              cur_rule = Empty.new
+            else
+              cur_rule = Rule.new
+            end
+            cur_production << cur_rule
+          when '<'
+            in_nonterminal = true
           else
-            break
+            error raise ParserError.new "Unexpected character '#{char}'", input, {line: line, col: col, length: 1}
           end
-
-          pos += 1
         end
-        {rule, pos}
+        grammar
       end
     end
   end

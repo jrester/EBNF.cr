@@ -1,18 +1,33 @@
 module EBNF
   # A part of a production that consits of one or more Atoms
   class Rule
+    property atoms : Array(Atom)
     include Enumerable(Atom)
 
     def initialize(@atoms = Array(Atom).new)
+    end
+
+    def initialize(atoms : Array(String), nonterminals : Array(String))
+      @atoms = Array(Atom).new
+      atoms.each { |atom| @atoms << (nonterminals.includes?(atom) ? Nonterminal.new atom : Terminal.new atom) }
+    end
+
+    def initialize(builder : JSON::PullParser)
+      builder.read_array do
+        Terminal.new(builder)
+      end
+      @atoms = Array(Atom).new
     end
 
     def clone
       Rule.new @atoms.clone
     end
 
-    JSON.mapping(
-      atoms: Array(Atom)
-    )
+    def to_json(builder : JSON::Builder)
+      builder.array do
+        @atoms.each { |atom| atom.to_json(builder) }
+      end
+    end
 
     def to_s(io, grammar_type = Grammar::Type::EBNF)
       if grammar_type == Grammar::Type::EBNF
@@ -52,7 +67,7 @@ module EBNF
       end
     end
 
-    delegate :[], :[]?, :<<, :each, :size, :empty?, to: @atoms
+    delegate :[], :[]?, :<<, :each, :size, :empty?, :pop, to: @atoms
 
     def_hash @atoms
   end

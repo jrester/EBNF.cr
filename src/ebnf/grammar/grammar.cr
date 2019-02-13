@@ -18,6 +18,44 @@ module EBNF
       EBNF,
       BNF,
       Bison
+
+      def self.from_string(string : String)
+        case string.upcase
+        when "EBNF"          then EBNF
+        when "BNF"           then BNF
+        when "BISON", "YACC" then Bison
+        else
+          raise InvalidGrammarType.new string
+        end
+      end
+    end
+
+    def initialize(builder : JSON::PullParser)
+      @productions = Hash(String, Production).new
+      @type = Type::EBNF
+      @start = nil
+      @terminals = Set(String).new
+      @resolved = false
+      builder.read_begin_object
+      while builder.kind != :end_object
+        key = builder.read_object_key
+        case key
+        when "grammar_type"
+          @type = Type.from_string builder.read_string
+        when "root"
+          @start = builder.read_string_or_null
+        when "grammar"
+          productions = Hash(String, Array(Array(String))).new(builder)
+          productions.each do |key, production|
+            @productions[key] = Production.new production, productions.keys
+          end
+          each_rule do |rule|
+            @terminals = Set(String).new (rule.atoms.map { |atom| (atom.is_a?(Terminal) ? atom.value : nil) }).compact
+          end
+          resolve
+        end
+      end
+      builder.read_end_object
     end
 
     # Creates a CFG with *productions* with specified `Grammar::Type` *type*
@@ -98,6 +136,8 @@ module EBNF
     def to_json(builder : JSON::Builder)
       builder.object do
         builder.field "grammar_type", @type.to_s
+        builder.field "root", @start
+        builder.field "grammar", @productions
       end
     end
 

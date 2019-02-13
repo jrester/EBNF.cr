@@ -1,21 +1,12 @@
 require "./src/ebnf"
 require "option_parser"
 require "colorize"
+require "benchmark"
 
 def error(msg : String)
   STDERR.puts "#{"ERROR".colorize(:red)}: #{msg}"
   STDERR.puts "See --help for usage details"
   exit(1)
-end
-
-def grammar_type_from_string(type : String) : EBNF::Grammar::Type
-  case type.upcase
-  when "EBNF"          then EBNF::Grammar::Type::EBNF
-  when "BNF"           then EBNF::Grammar::Type::BNF
-  when "BISON", "YACC" then EBNF::Grammar::Type::Bison
-  else
-    raise EBNF::InvalidGrammarType.new type
-  end
 end
 
 class Config
@@ -35,7 +26,7 @@ OptionParser.parse! do |parser|
   parser.on("--stdin", "Read from stdin") { config.stdin = true }
   parser.on("-j", "--json", "Export Grammar as json") { config.json = true }
   parser.on("--cnf", "Convert grammar to cnf") { config.cnf = true }
-  parser.on("-t TYPE", "--type=TYPE") { |type| config.grammar_type = grammar_type_from_string type }
+  parser.on("-t TYPE", "--type=TYPE") { |type| config.grammar_type = EBNF::Grammar::Type.from_string type }
   parser.on("-i", "--identify") { config.identify = true }
   parser.on("-v", "--verbose") { config.verbose = true }
   parser.on("-h", "--help", "Show this help") { puts parser }
@@ -56,6 +47,10 @@ else
 end
 
 def execute(config : Config, content : String)
+  pp EBNF::Bison.from(content)
+end
+
+def _execute(config : Config, content : String)
   if config.identify
     grammar_type = EBNF::TypeRecognizer.recognize?(content)
     grammar_type.nil? ? (puts "Unknown") : (puts grammar_type)

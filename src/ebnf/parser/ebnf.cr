@@ -5,220 +5,206 @@ require "../grammar"
 require "./base"
 require "./parser"
 
-module EBNF
-  module EBNF
-    extend Base
+module EBNF::EBNF
+  extend Base
 
-    class Parser < ::EBNF::Parser
-      TOKENS = {
-        /=/  => :definition,
-        /,/  => :concation,
-        /;/  => :termination,
-        /\[/ => :right_square_brace,
-        /\]/ => :left_square_brace,
-      }
-      SPECIAL_RIGHT_CHARACTERS = {:right_square_brace, :right_curly_brace,
-                                  :right_brace, :exception}
+  class Parser < ::EBNF::Parser
+    property in_double_string : Bool = false
+    property in_single_string : Bool = false
 
-      SPECIAL_LEFT_CHARACTERS = {:left_square_brace, :left_curly_brace, :left_brace}
+    property index : Int32 = -1
+    property line : Int32 = 1
+    property col : Int32 = 0
 
-      SPECIAL_CHARACTERS = SPECIAL_LEFT_CHARACTERS + SPECIAL_RIGHT_CHARACTERS
+    property terminal : String = String.new
+    property nonterminal : String = String.new
 
-      RULE_CHARACTERS = {:special, :terminal, :nonterminal} + SPECIAL_CHARACTERS
+    property in_rule : Bool = false
+    property in_special : Bool = false
+    property in_exception : Bool = false
 
-      private def self.lex(string : String, exception? : Bool, stop_on_unknown? : Bool = false)
-        tokens = Array(Token).new
-        column = 0
-        line = 0
+    property special : Special = Special.new
+    property rule : Rule = Rule.new
+    # Used to store the rule before special
+    property pre_rule : Rule? = nil
+    property production : Production = Production.new
 
-        scanner = StringScanner.new string
+    property production_name : String = String.new
 
-        until scanner.eos?
-          if (s = scanner.skip(/\h+/)) || (s = scanner.skip(/\(\*([^\)\*])*\)\*/))
-            column += s
-            next
-          end
+    property grammar : Grammar
 
-          # TOKENS.each_key do |regex|
-          #  if s = scanner.scan regex
-          #    token = TOKENS[regex][0]
-          #    if (callback = TOKENS[regex][1]?)
-          #      callback.call
-          #    end
-          #  end
-          # end
+    private def self._parse(input : String, exception? : Bool)
+      parser = Parser.new(input, exception?)
+      parser.grammar
+    end
 
-          token = if s = scanner.scan(/=/)
-                    :definition
-                  elsif s = scanner.scan(/,/)
-                    :concation
-                  elsif s = scanner.scan(/;/)
-                    :termination
-                  elsif s = scanner.scan(/\[/)
-                    :right_square_brace
-                  elsif s = scanner.scan(/\]/)
-                    :left_square_brace
-                  elsif s = scanner.scan(/\{/)
-                    :right_curly_brace
-                  elsif s = scanner.scan(/\}/)
-                    :left_curly_brace
-                  elsif s = scanner.scan(/\(/)
-                    :right_brace
-                  elsif s = scanner.scan(/\)/)
-                    :left_brace
-                  elsif s = scanner.scan(/\?([^\"])*\?/)
-                    :special
-                  elsif s = scanner.scan(/\|/)
-                    :bar
-                  elsif s = scanner.scan(/\-/)
-                    :exception
-                  elsif s = scanner.scan(/\"([^\"])*"/)
-                    :terminal
-                  elsif s = scanner.scan(/\'([^\'])*'/)
-                    :terminal
-                  elsif s = scanner.scan(/(\w|\-|\_)+/)
-                    :nonterminal
-                  elsif s = scanner.scan(/\n/)
-                    line += 1
-                    :newline
-                  elsif s = scanner.scan(/$/)
-                    :EOF
-                  else
-                    if exception?
-                      raise UnknownTokenError.new (scanner.peek 1), line, column
-                    elsif stop_on_unknown?
-                      return nil
-                    else
-                      s = scanner.peek 1
-                      scanner.offset += 1
-                      :unknown
-                    end
-                  end
+    def initialize(@input : String, @exception : Bool)
+      @no_semicolon_backtrack = false
+      @grammar = Grammar.new type: ::EBNF::Grammar::Type::EBNF
+      parse
+    end
 
-          s = s.lchop.rchop if token == :terminal
+    private def error(msg, length = 1)
+      raise ParserError.new msg, @input, {line: @line, col: @col, length: length} if @exception
+    end
 
-          tokens << {token: token,
-                     value: s,
-                     pos:   {line, column}}
+    private def next_char
+      @input[@index += 1]?
+    end
 
-          token != :newline ? (column += s.size) : (column = 0)
-        end
-
-        tokens
+    private def preprocess(char : Char) : Bool
+      case char
+      when ' '
+        finish_nonterminal
+      when ','
+        finish_nonterminal
+      when '\n'
+        @line += 1
+        @col = 0
+      when '\\'
+        parse_escape_char
+      when '\''
+        return false if @in_double_string
+        @in_single_string ? in_string_add : (@in_single_string = true)
+      when '"'
+        return false if @in_single_string
+        @in_double_string ? in_string_add : (@in_double_string = true)
+      else
+        return false
       end
+      true
+    end
 
-      parse_function_for Grammar::Type::EBNF
-
-      def self.parse_production(tokens : Array(Token), grammar : Grammar, exception? : Bool)
-        rules = Array(Rule).new
-        pos = -1
-        accept = false
-
-        until accept || pos >= tokens.size
-          token = tokens[pos += 1]?.try &.[:token]
-          break unless token
-          lookahead = tokens[pos + 1]?.try &.[:token]
-          break unless lookahead
-
-          if token == :termination
-            accept = true
-          elsif token == :bar || token == :newline || token == :concation
-            next
-          elsif RULE_CHARACTERS.includes? token
-            rule, pos_increment = parse_rule tokens[pos..-1], grammar
-            rules << rule
-            pos += pos_increment
-          else
-            if exception?
-              raise UnexpectedTokenError.new token, tokens[pos][:value], *tokens[pos][:pos]
-            else
-              return {nil, nil}
-            end
-          end
-        end
-        {rules, pos}
+    private def finish_nonterminal
+      if @in_nonterminal && @in_rule
+        @rule << Nonterminal.new @nonterminal
+        @nonterminal = String.new
       end
+      @in_nonterminal = false
+    end
 
-      def self.parse_rule(tokens : Array(Token), grammar : Grammar)
-        rule = Rule.new
-        accept = false
-        pos = -1
-
-        until accept || pos + 1 >= tokens.size
-          token = tokens[pos += 1]?.try &.[:token]
-          break unless token
-
-          if token == :nonterminal
-            rule.atoms << Nonterminal.new tokens[pos][:value]
-          elsif token == :terminal
-            rule.atoms << Terminal.new tokens[pos][:value]
-            grammar.terminals << tokens[pos][:value]
-          elsif SPECIAL_RIGHT_CHARACTERS.includes? token
-            special, pos_increment = parse_special token, tokens[pos..-1], grammar
-            rule.atoms << special
-            pos += pos_increment
-          elsif token == :concation
-            next
-          else
-            pos -= 1
-            accept = true
-          end
-        end
-        {rule, pos}
+    private def parse_escape_char
+      if @in_single_string || @in_double_string
+        @terminal += "\\"
+        @terminal += @input[@index += 1]
+      elsif @in_nonterminal
+        @nonterminal += "\\"
+        @nonterminal += @input[@index += 1]
       end
+    end
 
-      # OPTIMIZE
-      def self.parse_special(special_type, tokens, grammar)
-        special = Special.for special_type
-        raise ParserError.new "BUG: Unable to parse #{special_type} correctly" unless special
-        pos = 0
-        # For an Exception we only need to parse the next token
-        if special.type == Special::Type::Exception
-          token = tokens[pos += 1][:token]
+    private def close_special
+      error "Missing starting token for special!" if @in_special == false
+      return if @in_single_string || @in_double_string
+      @in_special = false
+      @special << @rule
+      @pre_rule.not_nil! << @special
+      @special = Special.new
+      @rule = @pre_rule.not_nil!
+    end
 
-          if SPECIAL_RIGHT_CHARACTERS.includes? token
-            special, pos_increment = parse_special token, tokens[pos..-1], grammar
-            pos += pos_increment
-            special.rules << Rule.new [special] of Atom
-          elsif token == :nonterminal
-            special.rules << Rule.new [Nonterminal.new tokens[pos][:value]] of Atom
-          elsif token == :terminal
-            special.rules << Rule.new [Terminal.new tokens[pos][:value]] of Atom
-          end
+    private def start_special(type : Special::Type)
+      @in_special = true
+      @special.type = type
+      @pre_rule = @rule
+      @rule = Rule.new
+    end
+
+    private def in_string_add
+      @rule << Terminal.new @terminal
+      @terminal = String.new
+      @in_double_string = false
+      @in_single_string = false
+    end
+
+    private def get_last_nonterminal : String
+      last_nonterminal = @nonterminal
+      @nonterminal = String.new
+      last_nonterminal
+    end
+
+    private def process(char : Char)
+      case char
+      when '='
+        start_production
+        @in_rule = true
+      when '|'
+        finish_rule
+        @in_rule = true
+      when ';'
+        finish_rule
+        @grammar.add_production @production_name, @production
+        @in_rule = false
+      when '{'
+        start_special Special::Type::Repetion
+      when '['
+        start_special Special::Type::Optional
+      when '('
+        start_special Special::Type::Grouping
+      when '-'
+        start_special Special::Type::Exception
+        @in_exception = true
+      when '}'
+        close_special
+      when ']'
+        close_special
+      when ')'
+        close_special
+      when .ascii?
+        @in_nonterminal = true
+        @nonterminal += char
+      else
+        error "Unexpected character #{char}"
+      end
+    end
+
+    private def finish_rule
+      if @in_special
+        @special << @rule
+        if @in_exception
+          @in_special = false
+          @in_exception = false
+        end
+      else
+        @production << @rule
+      end
+      @rule = Rule.new
+    end
+
+    private def start_production
+      if @in_rule
+        solve_missing_semicolon
+      end
+      @production = Production.new
+      @production_name = get_last_nonterminal
+    end
+
+    private def solve_missing_semicolon
+      error "Unexpected start of production! Maybe you forget a semicolon somewhere?" if @no_semicolon_backtrack
+      last_rule = production.last?
+      if last_rule
+        if (nonterminal = last_rule.pop).is_a? Nonterminal
+          @production_name = nonterminal.value
         else
-          end_token = Special.end_token_for special.type
-          raise ParserError.new "Unknown end token for #{special.type}" unless end_token
-          atoms = Array(Atom).new
-          accept = false
-
-          until accept || pos + 1 >= tokens.size
-            token = tokens[pos += 1]?.try &.[:token]
-            break unless token
-
-            if token == end_token
-              accept = true
-            elsif token == :bar
-              special.rules << Rule.new atoms.dup
-              atoms.clear
-            elsif token == :concation
-              next
-            elsif token == :nonterminal
-              atoms << Nonterminal.new tokens[pos][:value]
-            elsif token == :terminal
-              atoms << Terminal.new tokens[pos][:value]
-              grammar.terminals << tokens[pos][:value]
-            elsif SPECIAL_RIGHT_CHARACTERS.includes? token
-              special, pos_increment = parse_special token, tokens[pos..-1], grammar
-              pos += pos_increment
-              special.rules << Rule.new [special] of Atom
-            else
-              accept = true
-            end
-          end
-          special.rules << Rule.new atoms unless atoms.empty?
+          error "Unable to recover from missing semicolon: No nonterminal found"
         end
-        {special, pos}
+      else
+        error "Unable to recover from missing semicolon: No previous rule found!"
       end
-    end # Parser
-  end   # EBNF
-end     # EBNF
+    end
+
+    private def parse
+      while (char = next_char)
+        @col += 1
+        next if preprocess char
+
+        if @in_single_string || @in_double_string
+          @terminal += char
+          next
+        end
+
+        process char
+      end
+    end
+  end
+end # EBNF::EBNF

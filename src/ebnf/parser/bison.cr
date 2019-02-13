@@ -1,144 +1,161 @@
-require "string_scanner"
-
 require "../grammar"
 
 require "./base"
 require "./parser"
 
-module EBNF
-  module Bison
-    extend Base
+# old 248.76  (  4.02ms) (± 2.51%)  5259974 B/op   8.76× slower
+# new   2.18k (458.79µs) (± 1.03%)   301452 B/op        fastest
 
-    class Parser < Parser
-      private def self.lex(string, exception? : Bool, stop_on_unknown? : Bool = true)
-        tokens = Array(Token).new
-        column = 0
-        line = 0
+module EBNF::Bison
+  extend Base
 
-        scanner = StringScanner.new string
+  class Parser < Parser
+    private def self._parse(input : String, exception? : Bool)
+      grammar = Grammar.new type: Grammar::Type::Bison
+      line = 1
+      col = 0
 
-        until scanner.eos?
-          # skip spaces and comments
-          if (s = scanner.skip(/\h+/)) || (s = scanner.skip(/\/\*(.)*\*\//))
-            column += s
-            next
+      cur_production : Production? = nil
+      cur_rule : Rule? = nil
+
+      nonterminal = String.new
+      terminal = String.new
+      code = String.new
+
+      in_nonterminal = false
+      in_terminal = false
+      in_code = false
+      in_string = false
+
+      index = -1
+      while (char = input[index += 1]?)
+        col += 1
+
+        case char
+        when ' '
+          if cur_rule
+            if in_nonterminal
+              cur_rule << Nonterminal.new nonterminal unless nonterminal.empty?
+              nonterminal = String.new
+            elsif in_terminal
+              cur_rule << Terminal.new terminal
+              terminal = String.new
+            end
           end
-
-          token = if s = scanner.scan(/:/)
-                    :definition
-                  elsif s = scanner.scan(/\|/)
-                    :bar
-                  elsif s = scanner.scan(/\;/)
-                    :semicolon
-                  elsif s = scanner.scan(/[a-z]([a-z0-9]|\_|\-)*/)
-                    :nonterminal
-                  elsif s = scanner.scan(/[A-Z]([A-Z0-9]|\_|\-)*/)
-                    :terminal
-                  elsif s = scanner.scan(/\'([^\'])*'/)
-                    s = s.lchop.rchop
-                    :terminal
-                  elsif s = scanner.scan(/\{[^\}]*\}/)
-                    line += s.count "\n"
-                    :code
-                  elsif s = scanner.scan(/\n/)
-                    line += 1
-                    :newline
-                  elsif s = scanner.scan(/$/)
-                    :EOF
-                  else
-                    if exception?
-                      raise UnknownTokenError.new scanner.peek(1), line, scanner.offset
-                    elsif stop_on_unknown?
-                      return nil
-                    else
-                      s = scanner.peek 1
-                      scanner.offset += 1
-                      :unknown
-                    end
-                  end
-
-          tokens << {token: token,
-                     value: s,
-                     pos:   {line, column}}
-
-          token != :newline ? (column += s.size) : (column = 0)
+          in_nonterminal = false
+          in_terminal = false
+          next
+        when '\n'
+          line += 1
+          col = 0
+          if cur_rule
+            if in_nonterminal
+              cur_rule << Nonterminal.new nonterminal unless nonterminal.empty?
+              nonterminal = String.new
+            elsif in_terminal
+              cur_rule << Terminal.new terminal
+              terminal = String.new
+            end
+          end
+          in_nonterminal = false
+          in_terminal = false
+          next
+        when '\\'
+          next_char = "#{char}#{input[index += 1]}"
+          col += 1
+          if in_string
+            terminal += next_char
+          elsif in_code
+            code += next_char
+          elsif in_nonterminal
+            nonterminal += next_char
+          end
+          next
+        when '}'
+          next if in_string
+          in_code ? (in_code = false) : (error raise ParserError.new "Unexpected end of code section!", input, {line: line, col: col - 1, length: 1})
+          next
+        when '\''
+          in_string ? (in_string = false) : (in_string = true)
+          if cur_rule
+            cur_rule << Terminal.new terminal
+            terminal = String.new
+          end
+          next
         end
-        tokens
-      end
 
-      parse_function_for Grammar::Type::Bison
+        if in_string
+          terminal += char
+          next
+        elsif in_code
+          code += char
+          next
+        end
 
-      def self.parse_production(tokens, grammar, exception? : Bool)
-        pos = -1
-        accept = false
-        rules = Array(::EBNF::Rule).new
-
-        until accept || pos >= tokens.size
-          token = tokens[pos += 1]?.try &.[:token]
-          break unless token
-          lookahead = tokens[pos + 1]?.try &.[:token]
-          unless lookahead && token != :EOF
-            lookahead = :EOF
-          end
-
-          # puts "token: #{token}, lookahead: #{lookahead}, pos: #{tokens[pos][:pos]}"
-
-          if token == :newline
-            if lookahead == :bar
-              # if this is the first token we have 'nonterminal:\n|' which results in an empty rule
-              pos == 0 ? rules << Empty.new : next
-            elsif pos == 0 && (lookahead == :nonterminal || lookahead == :terminal)
-              # Only on the first token the next one can be nonterminal or terminal
-              # Otherwise it is a new production
-              next
-            else
-              accept = true
+        case char
+        when ':'
+          cur_production = Production.new
+          production_name = String.new
+          if nonterminal.empty?
+            if cur_rule
+              _production_name = cur_rule.pop
+              if _production_name.is_a? Terminal
+                error raise ParserError.new "Expected nonterminal before production definition!", input, {line: line, col: col - 1, length: 1}
+              elsif _production_name.is_a? Nonterminal
+                production_name = _production_name.value
+              end
             end
-          elsif token == :bar
-            if lookahead == :newline || pos == 0
-              # Allow: "| \n\n" and "foo: |"
-              rules << Empty.new
-            else
-              next
-            end
-          elsif token == :nonterminal || token == :terminal
-            rule, pos_increment = parse_rule tokens[pos..-1], grammar
-            rules << rule
-            pos += pos_increment
           else
-            if exception?
-              raise UnexpectedTokenError.new token, tokens[pos][:value], *tokens[pos][:pos]
-            else
-              return {nil, nil}
+            production_name = nonterminal
+            nonterminal = String.new
+          end
+          cur_rule = Rule.new
+          cur_production << cur_rule
+          grammar.add_production production_name, cur_production
+        when '|'
+          unless cur_production.nil?
+            unless cur_rule.nil?
+              unless nonterminal.empty?
+                cur_rule << Nonterminal.new nonterminal
+                nonterminal = String.new
+              end
+              unless terminal.empty?
+                cur_rule << Terminal.new terminal
+                terminal = String.new
+              end
             end
-          end
-        end
-        {rules, pos}
-      end
-
-      def self.parse_rule(tokens, grammar)
-        rule = Bison::Rule.new
-        pos = -1
-
-        tokens.each do |t|
-          if t[:token] == :nonterminal
-            rule << Nonterminal.new t[:value]
-          elsif t[:token] == :terminal
-            grammar.terminals << t[:value].not_nil!
-            rule << Terminal.new t[:value]
-          elsif t[:token] == :code
-            rule.action = t[:value][1..-2] # remove { and } from code
-            pos += 1
-            break
+            cur_rule = Rule.new
+            cur_production << cur_rule
           else
-            break
+            error raise ParserError.new "Unexpected rule divider!", input, {line: line, col: col - 1, length: 1}
           end
-
-          # Must be after the if's so pos is not incremented if we break
-          pos += 1
+        when ';'
+          if cur_production.nil?
+            error raise ParserError.new "Production termination out of Production definition!", input, {line: line, col: col - 1, length: 1}
+          else
+            cur_production = nil
+          end
+        when '{'
+          in_code = true
+        when .lowercase?
+          in_nonterminal = true
+          nonterminal += char
+        when .uppercase?
+          in_terminal = true
+          terminal += char
+        when '_'
+          if in_terminal
+            terminal += char
+          elsif in_nonterminal
+            nonterminal += char
+          else
+            error raise ParserError.new "Unexpected token #{char}!", input, {line: line, col: col - 1, length: 1}
+          end
+        else
+          error raise ParserError.new "Unexpected token #{char}!", input, {line: line, col: col - 1, length: 1}
         end
-        {rule, pos}
       end
+      return grammar
     end
   end
 end

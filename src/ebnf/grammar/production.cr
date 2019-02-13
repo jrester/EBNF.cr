@@ -7,16 +7,25 @@ module EBNF
   #
   # A Production with 2 rules
   class Production
+    property rules : Array(Rule)
+
     def initialize(@rules = Array(Rule).new)
+    end
+
+    def initialize(rules : Array(Array(String)), nonterminals : Array(String))
+      @rules = Array(Rule).new
+      rules.each { |rule| @rules << Rule.new rule, nonterminals }
     end
 
     def clone
       Production.new @rules.clone
     end
 
-    JSON.mapping(
-      rules: Array(Rule)
-    )
+    def to_json(builder : JSON::Builder)
+      builder.array do
+        @rules.each { |rule| rule.to_json(builder) }
+      end
+    end
 
     def to_s(io, grammar_type = Grammar::Type::EBNF)
       @rules.join("\n  | ", io) { |r, io| r.to_s io, grammar_type }
@@ -50,7 +59,7 @@ module EBNF
     end
 
     delegate :[], :[]?, :<<, to: @rules
-    delegate :size, :delete_at, :delete, :empty?, :each, to: @rules
+    delegate :size, :delete_at, :delete, :empty?, :each, :last?, to: @rules
 
     def_hash @rules
   end

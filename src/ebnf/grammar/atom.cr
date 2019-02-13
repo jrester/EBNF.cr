@@ -14,16 +14,22 @@ module EBNF
 
   # A String like 'a' or '+' in a grammar which does not represent a rule but a final symbol/word
   class Terminal < Atom
+    property value : String
+
     def initialize(@value)
+    end
+
+    def initialize(builder : JSON::PullParser)
+      @value = builder.read_string
     end
 
     def clone
       Terminal.new @value.clone
     end
 
-    JSON.mapping(
-      value: String
-    )
+    def to_json(builder : JSON::Builder)
+      builder.string @value
+    end
 
     def to_s(io, grammar_type = Grammar::Type::EBNF)
       case grammar_type
@@ -55,18 +61,23 @@ module EBNF
 
   # A String which corresponds to an existing production
   class Nonterminal < Atom
+    property value : String
     property production : Nil | Production
 
     def initialize(@value, @production = nil)
+    end
+
+    def initialize(builder : JSON::PullParser)
+      @value = builder.read_string
     end
 
     def clone
       Nonterminal.new @value.clone, nil
     end
 
-    JSON.mapping(
-      value: String,
-    )
+    def to_json(builder : JSON::Builder)
+      builder.string @value
+    end
 
     def to_s(io, grammar_type = Grammar::Type::EBNF)
       case grammar_type
@@ -94,38 +105,14 @@ module EBNF
 
   module EBNF
     class Special < Atom
+      property rules : Array(Rule)
+      property type : Type
+
       enum Type
         Optional,
         Repetion,
         Grouping,
         Exception
-      end
-
-      def self.end_token_for(special_type : Type)
-        case special_type
-        when Type::Optional then :left_square_brace
-        when Type::Repetion then :left_curly_brace
-        when Type::Grouping then :left_brace
-        else
-          nil
-        end
-      end
-
-      def self.type_for(symbol : Symbol)
-        case symbol
-        when :right_square_brace then Type::Optional
-        when :right_curly_brace  then Type::Repetion
-        when :right_brace        then Type::Grouping
-        when :exception          then Type::Exception
-        else
-          nil
-        end
-      end
-
-      def self.for(symbol : Symbol)
-        special_type = Special.type_for symbol
-        return nil unless special_type
-        Special.new type: special_type
       end
 
       def initialize(@rules = Array(Rule).new, @type = Type::Optional)
@@ -140,11 +127,6 @@ module EBNF
           return nil unless exception? ? rule.resolve? grammar : rule.resolve grammar
         end
       end
-
-      JSON.mapping(
-        rules: Array(Rule),
-        type: Type
-      )
 
       def to_s(io, grammar_type = Grammar::Type::EBNF)
         enclosing_symbols = case @type
