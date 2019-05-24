@@ -3,13 +3,14 @@ require "../grammar"
 require "./base"
 require "./parser"
 
-# old 248.76  (  4.02ms) (± 2.51%)  5259974 B/op   8.76× slower
-# new   2.18k (458.79µs) (± 1.03%)   301452 B/op        fastest
-
 module EBNF::Bison
   extend Base
 
   class Parser < Parser
+    private macro error_loc
+      {line: line, col: col - 1, length: 1}
+    end
+
     private def self._parse(input : String, exception? : Bool)
       grammar = Grammar.new type: Grammar::Type::Bison
       line = 1
@@ -73,7 +74,7 @@ module EBNF::Bison
           next
         when '}'
           next if in_string
-          in_code ? (in_code = false) : (error raise ParserError.new "Unexpected end of code section!", input, {line: line, col: col - 1, length: 1})
+          in_code ? (in_code = false) : (error raise ParserError.new "Unexpected end of code section!", input, error_loc)
           next
         when '\''
           in_string ? (in_string = false) : (in_string = true)
@@ -100,7 +101,7 @@ module EBNF::Bison
             if cur_rule
               _production_name = cur_rule.pop
               if _production_name.is_a? Terminal
-                error raise ParserError.new "Expected nonterminal before production definition!", input, {line: line, col: col - 1, length: 1}
+                error raise ParserError.new "Expected nonterminal before production definition!", input, error_loc
               elsif _production_name.is_a? Nonterminal
                 production_name = _production_name.value
               end
@@ -127,11 +128,11 @@ module EBNF::Bison
             cur_rule = Rule.new
             cur_production << cur_rule
           else
-            error raise ParserError.new "Unexpected rule divider!", input, {line: line, col: col - 1, length: 1}
+            error raise ParserError.new "Unexpected rule divider!", input, error_loc
           end
         when ';'
           if cur_production.nil?
-            error raise ParserError.new "Production termination out of Production definition!", input, {line: line, col: col - 1, length: 1}
+            error raise ParserError.new "Production termination out of Production definition!", input, error_loc
           else
             cur_production = nil
           end
@@ -149,10 +150,10 @@ module EBNF::Bison
           elsif in_nonterminal
             nonterminal += char
           else
-            error raise ParserError.new "Unexpected token #{char}!", input, {line: line, col: col - 1, length: 1}
+            error raise UnexpectedTokenError.new char, input, error_loc
           end
         else
-          error raise ParserError.new "Unexpected token #{char}!", input, {line: line, col: col - 1, length: 1}
+          error raise UnexpectedTokenError.new  char, input, error_loc
         end
       end
       return grammar

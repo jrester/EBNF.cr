@@ -130,7 +130,7 @@ module EBNF
           when '<'
             in_nonterminal = true
           else
-            error raise ParserError.new "Unexpected character '#{char}'", input, {line: line, col: col, length: 1}
+            error raise UnexpectedTokenError.new char, input, {line: line, col: col, length: 1}
           end
         end
         grammar

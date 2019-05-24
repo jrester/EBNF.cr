@@ -2,28 +2,29 @@ require "colorize"
 
 module EBNF
   class Error < Exception
-    def error(msg, pos, io)
+    def self.error(msg, io)
       io.print "Error: ".colorize.red.bold
-      io.print msg.colorize.bright
+      io.puts msg.colorize.bright
+    end
+
+    def self.error_at(msg, pos, io)
+      error msg, io
       io.puts " (#{pos[0]}:#{pos[1]})"
     end
 
-    private def source_to_line(source : String, line_num : Int32)
-      source.each_line.to_a[line_num - 1]
-    end
-
-    def error_with_source(msg, source, pos : {line: Int32, col: Int32, length: Int32}, io)
-      error msg, {pos[:line], pos[:col]}, io
+    def self.error_with_source(msg, source, pos : {line: Int32, col: Int32, length: Int32}, io)
+      error_at msg, {pos[:line], pos[:col]}, io
       io.puts
-      io.puts source_to_line source, pos[:line]
+      io.puts source.each_line.to_a[pos[:line] - 1]
       pos[:col].times { io.print ' ' }
       io.print '^'
       (pos[:length] - 1).times { io.print '-' }
       io.puts
     end
-  end
 
-  class LexerError < Error
+    def print(io : IO)
+      Error.error @message, io
+    end
   end
 
   class ParserError < Error
@@ -31,22 +32,20 @@ module EBNF
       super(@msg)
     end
 
-    def initialize(@msg : String, @code : String, @pos : {line: Int32, col: Int32, length: Int32})
-      error_with_source @msg, @code, @pos, STDERR
+    def print(io : IO)
+      Error.error_with_source @msg, @code, @pos, io
     end
   end
 
-  # Thrown by a Lexer if it sees an unknown token
-  class UnknownTokenError < LexerError
+  class UnknownTokenError < ParserError
     def initialize(@char : Char | String, @line : Int32, @column : Int32)
       super("Unkown token #{@char} at #{@line}:#{@column}")
     end
   end
 
-  # Thrown by the parser when another token was expected
   class UnexpectedTokenError < ParserError
-    def initialize(@token : Symbol, @value : String, @line : Int32, @column : Int32, @else : Array(Symbol) | Nil = nil)
-      super("Unexpted token #{@token}(#{@value}) at #{@line}:#{@column}!#{"\nExpected: #{@else.not_nil!.join(", ")}" if @else}")
+    def initialize(@token : Char, @code, @pos)
+      super("unexpected token #{@token}", @code, @pos)
     end
   end
 

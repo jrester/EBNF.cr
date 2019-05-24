@@ -1,6 +1,5 @@
 /docs/
 /lib/
-/bin/
 /benchmark/
 /.shards/
 *.dwarf

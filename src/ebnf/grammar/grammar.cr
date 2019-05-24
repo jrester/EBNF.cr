@@ -77,7 +77,11 @@ module EBNF
 
       return if grammar_type.nil?
 
-      case grammar_type
+      from input, grammar_type, stop_on_unknown?, resolve?, start
+    end
+
+    def self.from?(input : String, type : Type, stop_on_unknown? : Bool = true, resolve? : Bool = true, start : String | Symbol? = nil)
+      case type
       when Type::EBNF
         EBNF.from?(input, stop_on_unkown, resolve?, start)
       when Type::BNF
@@ -89,7 +93,11 @@ module EBNF
 
     # Parses the given string and returns `Grammar` and raises UnexpectedTokenError or UnknownTokenError
     def self.from(input : String, resolve? : Bool = true, start : String | Symbol? = nil) : Grammar
-      case TypeRecognizer.recognize input
+      from input, TypeRecognizer.recognize(input), resolve?, start
+    end
+
+    def self.from(input : String, type : Type, resolve? : Bool = true, start : String | Symbol? = nil)
+      case type
       when Type::EBNF
         EBNF.from(input, resolve?, start)
       when Type::BNF

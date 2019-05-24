@@ -28,6 +28,7 @@ dependencies:
 
 ## Usage
 
+* [CLI](#cli)
 * [Parse Grammar](#parsing)
   - [EBNF Grammar](#ebnf-grammar)
   - [BNF Grammar](#bnf-grammar)
@@ -43,6 +44,24 @@ dependencies:
   - [LL(0)]()
   - [LL(1)]()
   - [GLR]()
+
+## CLI
+
+The library provides a simple cli to identify convert or export grammar
+
+```bash
+$ crystal run bin/ebnf.cr -- --help
+Usage: ebnf [OPTIONS] file
+    --stdin                          Read from stdin
+    -j, --json                       Export Grammar as json
+    -c, --cnf                        Convert grammar to cnf
+    -b, --bnf                        Convert grammar to bnf
+    -t TYPE, --type=TYPE             Provide type of grammar. If not provided grammar will be detected automatically.
+    -i, --identify                   Identify grammar
+    -o FILE, --out=FILE              Output file
+    -v                               --verbose
+    -h, --help                       Show this help
+```
 
 ## Parsing
 
@@ -139,14 +158,12 @@ Grammar
 bison = EBNF::Bison.from grammar #=> EBNF::Grammar
 ```
 
-> Note: The parser is not built for parsing c/c++ code!
-> Each code segment should contain crystal code otherwise the parser will fail
-
 Every Grammar can be exported to json with `#to_json`
 and be converted to BNF grammar using `#to_bnf`.
 
 
 ### Conversions
+
 
 #### Convert Grammar
 
