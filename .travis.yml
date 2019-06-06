@@ -1,7 +1,7 @@
 language: crystal
 crystal:
-  - nightly
+  - latest
 
 script:
-  - crystal spec
+  - crystal spec --warnings=all --error-on-warnings
   - crystal tool format --check
