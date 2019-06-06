@@ -153,7 +153,7 @@ module EBNF::Bison
             error raise UnexpectedTokenError.new char, input, error_loc
           end
         else
-          error raise UnexpectedTokenError.new  char, input, error_loc
+          error raise UnexpectedTokenError.new char, input, error_loc
         end
       end
       return grammar

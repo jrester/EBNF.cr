@@ -15,8 +15,8 @@ module EBNF
     getter follow_set : Hash(String, Set(Terminal))? = nil
 
     enum Type
-      EBNF,
-      BNF,
+      EBNF
+      BNF
       Bison
 
       def self.from_string(string : String)

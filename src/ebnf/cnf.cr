@@ -2,10 +2,10 @@ module EBNF
   module CNF
     # The steps to perform for createing a CNF
     enum Step
-      START,
-      TERM,
-      BIN,
-      DEL,
+      START
+      TERM
+      BIN
+      DEL
       UNIT
     end
 

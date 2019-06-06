@@ -47,7 +47,7 @@ dependencies:
 
 ## CLI
 
-The library provides a simple cli to identify convert or export grammar
+The library provides a simple cli to identify, convert or export grammar
 
 ```bash
 $ crystal run bin/ebnf.cr -- --help

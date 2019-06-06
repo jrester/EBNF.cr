@@ -109,9 +109,9 @@ module EBNF
       property type : Type
 
       enum Type
-        Optional,
-        Repetion,
-        Grouping,
+        Optional
+        Repetion
+        Grouping
         Exception
       end
 
