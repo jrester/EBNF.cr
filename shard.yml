@@ -1,17 +1,17 @@
 name: ebnf
-version: 0.1.7
+version: 0.1.8
 description: "Parse and work with Context free Grammar"
 
 authors:
   - jrester <jrester379@gmail.com>
 
-crystal: 0.29.0
+crystal: 0.33.0
 
 license: MIT
 
 targets:
   ebnf:
-    main: cli.cr
+    main: bin/ebnf.cr
 
 executables:
   - ebnf
